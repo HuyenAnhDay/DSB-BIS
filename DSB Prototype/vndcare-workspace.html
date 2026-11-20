@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>VNDCARE Workspace</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: một khung chat kiểu Slack làm nền. Thanh bên trái = nơi đi (la bàn, hộp chăm, không gian, phòng khách). Giữa = làm việc. Phải = hồ sơ sống của phòng. */
+:root{
+  --bg:#F4F4F5; --panel:#FFFFFF; --panel-2:#FAFAFA; --fg:#18181B; --muted:#71717A; --line:#E4E4E7;
+  --primary:#2563EB; --primary-h:#1D4ED8; --primary-soft:#EFF6FF; --primary-ink:#1E40AF;
+  --ok:#16A34A; --ok-soft:#DCFCE7; --warn:#D97706; --warn-soft:#FEF3C7; --bad:#DC2626; --bad-soft:#FEE2E2;
+  --agent:#7C3AED; --agent-soft:#F3E8FF; --ring:rgba(37,99,235,.28); --shadow:0 8px 24px rgba(0,0,0,.12);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#09090B; --panel:#131316; --panel-2:#18181C; --fg:#F4F4F5; --muted:#A1A1AA; --line:#27272A;
+  --primary:#3B82F6; --primary-h:#60A5FA; --primary-soft:#172554; --primary-ink:#BFDBFE;
+  --ok:#4ADE80; --ok-soft:#052E16; --warn:#FBBF24; --warn-soft:#3B2A05; --bad:#F87171; --bad-soft:#3F1010;
+  --agent:#A78BFA; --agent-soft:#2E1065; --ring:rgba(96,165,250,.35); --shadow:0 8px 24px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#09090B; --panel:#131316; --panel-2:#18181C; --fg:#F4F4F5; --muted:#A1A1AA; --line:#27272A;
+  --primary:#3B82F6; --primary-h:#60A5FA; --primary-soft:#172554; --primary-ink:#BFDBFE;
+  --ok:#4ADE80; --ok-soft:#052E16; --warn:#FBBF24; --warn-soft:#3B2A05; --bad:#F87171; --bad-soft:#3F1010;
+  --agent:#A78BFA; --agent-soft:#2E1065; --ring:rgba(96,165,250,.35); --shadow:0 8px 24px rgba(0,0,0,.5); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.45;
+  padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;box-shadow:0 0 0 4px var(--ring)}
+.num{font-variant-numeric:tabular-nums}
+body.audit .act{pointer-events:none;opacity:.45}
+
+.app{display:grid;grid-template-columns:264px minmax(0,1fr);height:calc(100dvh - 32px);min-height:680px;max-width:1760px;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+
+/* Thanh bên */
+.side{border-right:1px solid var(--line);display:flex;flex-direction:column;padding:12px;gap:2px;background:var(--panel-2);min-width:0;overflow:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 10px;font-weight:600;font-size:15px}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center}
+.logo svg{width:18px;height:18px}
+.nav-g{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav button{display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:0;background:transparent;border-radius:6px;color:var(--muted);font-weight:500;text-align:left;transition:background 150ms ease-out;white-space:nowrap;overflow:hidden}
+.nav button:hover{background:var(--line);color:var(--fg)}
+.nav button[aria-current="page"]{background:var(--primary-soft);color:var(--primary-ink)}
+.nav .ic{width:16px;text-align:center;opacity:.75;flex:none}
+.pill{margin-left:auto;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;font-weight:600;display:grid;place-items:center;flex:none}
+.side-foot{margin-top:auto;padding:12px 8px 0;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;flex-direction:column;gap:8px}
+.sel{height:32px;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:0 8px;max-width:100%}
+.av{width:28px;height:28px;border-radius:999px;background:var(--primary-soft);color:var(--primary-ink);display:grid;place-items:center;font-size:12px;font-weight:600;flex:none}
+.av.ag{background:var(--agent-soft);color:var(--agent)}
+
+/* Khung chính */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.top{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--line)}
+.top h1{font-size:16px;font-weight:600;margin:0;white-space:nowrap}
+.top .sub{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.top .sp{flex:1}
+.btn.menu-btn{display:none}
+.body{flex:1;min-height:0;position:relative}
+.view{display:none;height:100%}
+.view.on{display:block}
+.page{overflow:auto;padding:24px}
+.ro-banner{border:1px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;margin-bottom:16px;font-weight:500}
+.ro-banner[hidden]{display:none}
+
+.btn{height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--line);background:var(--panel);font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:background 150ms ease-out;white-space:nowrap}
+.btn:hover{background:var(--panel-2)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-h)}
+.btn.danger{color:var(--bad);border-color:var(--bad-soft)}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.lead{margin:0 0 16px;color:var(--muted);max-width:720px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.panel{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel.soft{background:var(--primary-soft);border-color:transparent}
+.panel h2,.panel h3{margin:0;font-size:14px;font-weight:600}
+.panel p{margin:0;color:var(--muted);font-size:13px}
+.ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ph .sp{flex:1}
+.sec-h{margin:24px 0 12px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.sec-h:first-child{margin-top:0}
+.badge{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:500;background:var(--primary-soft);color:var(--primary-ink);white-space:nowrap}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}
+.badge.bad{background:var(--bad-soft);color:var(--bad)}
+.badge.ag{background:var(--agent-soft);color:var(--agent)}
+.badge.gray{background:var(--line);color:var(--muted)}
+.lock{color:var(--muted);font-size:12px;display:inline-flex;gap:4px;align-items:center}
+.src{font-size:12px;color:var(--muted)}
+.lnk{border:0;background:transparent;color:var(--primary);padding:0;font-size:13px;text-align:left}
+.lnk:hover{text-decoration:underline}
+.quote{border-left:3px solid var(--primary);padding:6px 12px;background:var(--panel-2);border-radius:0 6px 6px 0;font-size:13px}
+.quote.empty{border-left-color:var(--line);color:var(--muted)}
+.kims{display:flex;gap:6px;flex-wrap:wrap}
+.kim{height:24px;padding:0 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px;font-weight:500;display:inline-flex;align-items:center;background:var(--panel)}
+.kim.on{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 3px var(--ring)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{height:28px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-weight:500;color:var(--muted);font-size:13px}
+.chip[aria-pressed="true"]{background:var(--primary-soft);color:var(--primary-ink);border-color:var(--primary)}
+.filters{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.tw{border:1px solid var(--line);border-radius:8px;overflow:auto;background:var(--panel)}
+table{width:100%;border-collapse:collapse}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:0 12px;height:34px;background:var(--panel-2);border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+code{font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:1px 6px}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:32px;text-align:center;color:var(--muted)}
+.gate{border:1px dashed var(--line);border-radius:8px;padding:12px;background:var(--panel-2);display:flex;flex-direction:column;gap:6px}
+.bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--primary)}
+.metric{display:flex;flex-direction:column;gap:6px;padding:10px 0;border-top:1px solid var(--line)}
+.metric:first-of-type{border-top:0}
+.metric .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.how{font-size:12px;color:var(--muted);background:var(--panel-2);border-radius:6px;padding:8px}
+.how[hidden]{display:none}
+.tile{border:1px solid var(--line);border-radius:8px;padding:12px 16px;background:var(--panel);text-align:left;display:flex;flex-direction:column;gap:2px}
+button.tile:hover{border-color:var(--primary)}
+.tile b{font-size:24px;font-weight:600;line-height:1.2}
+.tile span{color:var(--muted);font-size:12px}
+.klist{display:flex;flex-direction:column;gap:6px}
+.krow{border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:8px 10px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.krow:hover{border-color:var(--primary)}
+.krow .t{font-weight:600}
+.tgl{display:flex;align-items:center;gap:8px;font-size:13px}
+.tgl input{width:16px;height:16px;accent-color:var(--primary)}
+
+/* Hộp chăm */
+.two{display:grid;grid-template-columns:340px minmax(0,1fr);gap:16px;align-items:start}
+.list{display:flex;flex-direction:column;gap:8px}
+.li{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:4px;width:100%}
+.li:hover{border-color:var(--primary)}
+.li[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft)}
+.li .t{font-weight:600}
+.li .s{color:var(--muted);font-size:12px}
+.li .r{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.detail{border:1px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}
+.d-h{display:flex;gap:10px;align-items:center;padding:16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.d-h .t{font-weight:600;min-width:0}
+.d-h .sp{flex:1}
+.d-b{padding:16px;display:flex;flex-direction:column;gap:16px}
+.d-b h4{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.02em}
+.d-f{display:flex;gap:8px;padding:0 16px 16px;flex-wrap:wrap;align-items:center}
+.msg{max-width:85%;padding:8px 12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line);overflow-wrap:anywhere}
+.msg.me{align-self:flex-end;background:var(--primary-soft);border-color:transparent}
+.convo{display:flex;flex-direction:column;gap:8px}
+.draft{width:100%;min-height:110px;border:1px solid var(--agent);border-radius:6px;background:var(--agent-soft);padding:12px;line-height:1.55;font-size:13px;resize:vertical}
+.checks{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Phòng (Slack) */
+#v-phong.on{display:grid;grid-template-columns:minmax(0,1fr) 400px}
+#v-phong.no-canvas{grid-template-columns:minmax(0,1fr)}
+#v-phong.no-canvas .canvas{display:none}
+.pane{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line)}
+.r-h{padding:12px 24px;border-bottom:1px solid var(--line);background:var(--panel-2);display:flex;flex-direction:column;gap:8px}
+.r-h b{font-size:15px}
+.mem{display:flex;gap:6px;flex-wrap:wrap}
+.invite{display:flex;gap:6px;max-width:520px}
+.invite select{flex:1;min-width:0;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--panel);padding:0 6px;font-size:12px}
+.msgs{flex:1;min-height:0;overflow:auto;padding:16px 24px;display:flex;flex-direction:column;gap:14px}
+.rsys{text-align:center;font-size:12px;color:var(--muted);padding:2px 8px}
+.rm{display:flex;gap:10px;align-items:flex-start}
+.rm .body{min-width:0;display:flex;flex-direction:column;gap:4px;flex:1}
+.rm .tx{overflow-wrap:anywhere}
+.rcard{border:1px solid var(--agent);background:var(--agent-soft);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;font-size:13px;max-width:640px}
+.rcard.refuse{border-color:var(--warn);background:var(--warn-soft)}
+.rcard.plain{border-color:var(--line);background:var(--panel)}
+.rcard .bd{white-space:pre-line;overflow-wrap:anywhere}
+.rcard form{display:flex;gap:6px}
+.rcard input{flex:1;min-width:0;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--panel)}
+.row-l{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sug{display:flex;gap:6px;flex-wrap:wrap;padding:0 24px 8px}
+.sug button{height:36px;padding:0 14px;font-weight:500;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:12px}
+.sug button:hover{border-color:var(--primary);background:var(--primary-soft)}
+.compose{display:flex;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--line)}
+.compose input{flex:1;min-width:0;height:38px;border:1px solid var(--line);border-radius:6px;padding:0 12px;background:var(--panel)}
+.canvas{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0;background:var(--panel)}
+.rail{display:grid;grid-template-columns:1fr;gap:6px}
+.ne{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:8px 10px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.ne b{font-size:13px}
+.ne span{font-size:12px;color:var(--muted)}
+.ne[aria-pressed="true"]{border-color:var(--primary);background:var(--primary-soft);box-shadow:0 0 0 3px var(--ring)}
+.ne.done b{color:var(--ok)}
+.tl{display:flex;flex-direction:column;gap:10px}
+.tl .e{display:grid;grid-template-columns:60px minmax(0,1fr);gap:8px;font-size:13px}
+.tl .d{color:var(--muted);font-size:12px}
+.fin{height:28px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--panel);width:100%}
+.canvas-btn{display:none}
+
+/* Không gian */
+.kg{display:grid;grid-template-columns:240px minmax(0,1fr);gap:16px;align-items:start}
+.vlist{display:flex;flex-direction:column;gap:4px}
+.vlist .nav-g{padding:8px 4px 2px}
+.vlist button{height:32px;padding:0 10px;border:0;background:transparent;border-radius:6px;text-align:left;color:var(--muted);font-weight:500;display:flex;gap:6px;align-items:center}
+.vlist button:hover{background:var(--panel-2);color:var(--fg)}
+.vlist button[aria-current="true"]{background:var(--primary-soft);color:var(--primary-ink)}
+.builder{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;align-items:end}
+.builder label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+.ask{display:flex;gap:8px}
+.ask input{flex:1;min-width:0;height:34px;border:1px solid var(--agent);border-radius:6px;padding:0 10px;background:var(--agent-soft)}
+.kanban{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.kcol{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.kcol h3{margin:4px 6px;font-size:13px;font-weight:600;display:flex;justify-content:space-between}
+
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;box-shadow:var(--shadow);font-weight:500;z-index:60;max-width:90vw}
+.toast[hidden]{display:none}
+.gloss{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:grid;place-items:center;padding:16px}
+.gloss[hidden]{display:none}
+.gloss .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);max-width:640px;width:100%;max-height:calc(100dvh - 32px);overflow:auto;padding:20px;display:flex;flex-direction:column;gap:8px}
+
+@media (max-width:1180px){
+  #v-phong.on{grid-template-columns:minmax(0,1fr)}
+  .canvas{display:none}
+  .canvas.show{display:flex;position:absolute;inset:0;z-index:5}
+  .canvas-btn{display:inline-flex}
+  .two{grid-template-columns:1fr}
+  .kg{grid-template-columns:1fr}
+}
+@media (max-width:820px){
+  body{padding-block:8px}
+  .app{grid-template-columns:1fr;height:calc(100dvh - 16px);min-height:0}
+  .side{position:absolute;left:0;top:0;bottom:0;width:264px;z-index:30;transform:translateX(-100%);transition:transform 150ms ease-out;box-shadow:var(--shadow)}
+  body.side-open .side{transform:none}
+  .btn.menu-btn{display:inline-flex}
+  .top{padding:0 16px}.top .sub{display:none}
+  .page{padding:16px}
+  .r-h,.msgs{padding-left:16px;padding-right:16px}.sug,.compose{padding-left:16px;padding-right:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+#v-phong{position:relative;grid-template-columns:minmax(0,1fr)!important}
+.canvas{display:none}
+.canvas.show{display:flex;position:absolute;top:0;right:0;bottom:0;width:min(380px,100%);z-index:5;box-shadow:-8px 0 24px rgba(0,0,0,.12);border-left:1px solid var(--line)}
+.canvas-btn{display:inline-flex}.canvas-btn[hidden]{display:none!important}
+#chanNav{display:none}
+.mem-d{padding:2px 0 6px;font-size:12px;color:var(--muted)}.mem-d summary{cursor:pointer}
+</style>
+</head>
+<body>
+
+
+<div class="app" id="app">
+  <aside class="side" id="side">
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg></div><span>VNDCARE</span></div>
+    <nav class="nav" id="nav" aria-label="Điều hướng"></nav>
+    <nav class="nav" id="roomNav" aria-label="Phòng khách"></nav>
+    <nav class="nav" id="chanNav" aria-label="Kênh"></nav>
+    <div class="side-foot">
+      <label for="role">Xem với vai trò</label>
+      <select id="role" class="sel"><option value="ca">CA · Hà Trần</option><option value="audit">Kiểm toán (chỉ xem)</option></select>
+      <button class="lnk" data-go="cai-dat" type="button">Cài đặt</button><button class="lnk" data-go="cho-doc" type="button">Mọi bản máy chờ đọc</button>
+      <span>Dữ liệu mẫu. Khách chỉ là mã trên công cụ của CA.</span>
+    </div>
+  </aside>
+
+  <section class="main">
+    <header class="top">
+      <button class="btn menu-btn" id="menuBtn" type="button" aria-label="Mở thanh bên">Menu</button>
+      <h1 id="title"></h1><span class="sub" id="subtitle"></span>
+      <span class="sp"></span>
+      <button class="btn canvas-btn" id="canvasBtn" type="button">Hồ sơ</button>
+      <button class="btn" id="glossBtn" type="button">Từ điển</button>
+    </header>
+    <div class="body">
+      <div class="view page" id="v-dashboard"></div>
+      <div class="view page" id="v-hop-cham"></div>
+      <div class="view page" id="v-cho-doc"></div>
+      <div class="view page" id="v-khong-gian"></div>
+      <div class="view page" id="v-cai-dat"></div>
+      <div class="view" id="v-phong">
+        <section class="pane">
+          <div class="r-h" id="rHead"></div>
+          <div class="msgs" id="rMsgs" aria-live="polite"></div>
+          <div class="sug" id="rSug"></div>
+          <form class="compose" id="rForm"><input id="rInp" placeholder="Nhắn trong phòng. Gõ / để ra lệnh, @trợ lý để gọi máy…" aria-label="Tin nhắn" autocomplete="off"><button class="btn primary act" type="submit">Gửi</button></form>
+        </section>
+        <aside class="canvas" id="canvas" aria-label="Hồ sơ sống"></aside>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" hidden></div>
+<div class="gloss" id="gloss" hidden></div>
+
+<script>
+(function(){
+  window.addEventListener('error',function(e){document.documentElement.setAttribute('data-err',(e.message||'')+' @'+(e.lineno||''))});
+  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+  function ea(s){return esc(s).replace(/"/g,'&quot;')}
+  var tt;function toast(t){var e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(tt);tt=setTimeout(function(){e.hidden=true},3000)}
+  function ini(n){return n.split(' ').map(function(w){return w[0]}).slice(-2).join('')}
+
+  /* ================= Dữ liệu mẫu ================= */
+  var KIMS=['Dgo','Dinvest','Dcare','Dvalues'];
+  var KGLOSS={Dgo:'mời khách nói lại đích',Dinvest:'cùng đặt nhịp góp, kế hoạch',Dcare:'đứng cạnh đúng lúc',Dvalues:'cùng đọc lại kết quả'};
+  var NE=[
+    {k:'V',n:'Trà Việt',p:'Điều coi trọng',kim:'Dgo',cta:'Mời khách nói lại đích bằng chữ của họ',ranh:'Không nói thay'},
+    {k:'N',n:'La Bàn',p:'Nền và nhu cầu',kim:'Dgo',cta:'Đọc KYC, NRX cùng khách. Hồ sơ đủ mới sáng Dinvest',ranh:'Không điền hộ'},
+    {k:'D',n:'Soi Sáng',p:'Kỷ luật đầu tư',kim:'Dcare',cta:'Đứng cạnh đúng lúc, soi giao dịch cùng khách bằng năm câu VNDGO',ranh:'Quyết định là của khách'},
+    {k:'G',n:'Tích Năng Lực',p:'Mục tiêu',kim:'Dinvest',cta:'Khách tự đặt nhịp góp theo HWG',ranh:'Không đặt hộ'},
+    {k:'O',n:'Sống Đầu Tư',p:'Kết quả',kim:'Dvalues',cta:'Ngồi cùng đọc lại bức tranh, đặt bậc kế tiếp',ranh:'Không đặt bậc cuối'}
+  ];
+  var VND=[['V','Giá trị và tầm nhìn'],['N','Nhu cầu và nuôi dưỡng'],['D','Ước mơ và kỷ luật'],['C','Đồng hành'],['A','Nói vì bạn'],['R','Trách nhiệm'],['E','Trao quyền'],['S','Phụng sự']];
+  var STAGE={on:['Mới đón vào · Be-on','Dưỡng → Dẫn → Dụng'],in:['Đang đồng hành · Be-in','Dụng → Dẫn → Dưỡng'],out:['Rời hoặc ngủ · Be-out','Dưỡng trước']};
+  var GOI={DA:'Tự chủ trên nền số',DCA:'Có chuyên viên đồng hành',DMA:'Qua doanh nghiệp / đối tác'};
+  var khach=[
+    {id:'K-0412',name:'Nguyễn Minh Anh',goi:'DCA',st:'on_in',kim:'Dcare',neLit:'D',ev:'Thị trường giảm 3 ngày liên tiếp',due:'Hôm nay',ch:'Zalo',last:'12/11',
+      ne:{V:'«Mình muốn có một khoản để con đi học nước ngoài năm 2035.»',N:'«Mình còn khoản vay mua nhà nên chỉ để dành được từ lương.»',D:'«Mình tự hứa không bán chỉ vì thị trường giảm vài tháng.»',G:'«Mỗi tháng góp một khoản cố định, tăng dần theo lương.»',O:''},
+      tl:[{t:'12/11',w:'ca',x:'Buổi gặp 40 phút. Khách kể lại đích bằng lời của mình.',l:'V · N · C'},{t:'05/11',w:'may',x:'Máy chuẩn bị tờ đọc lại kế hoạch cho buổi gặp.',l:''},{t:'28/10',w:'khach',x:'«Mình tự hứa không bán chỉ vì thị trường giảm vài tháng.»',l:''}]},
+    {id:'K-0388',name:'Trần Quốc Bảo',goi:'DCA',st:'in',kim:'Dvalues',neLit:'O',ev:'Cuối kỳ: tài khoản chạy, người đứng yên 3 kỳ',due:'Còn 2 ngày',ch:'Hotline',last:'02/09',
+      ne:{V:'«Mình muốn nghỉ hưu sớm, không phụ thuộc con cháu.»',N:'',D:'',G:'',O:''},tl:[{t:'02/09',w:'ca',x:'Buổi gặp ngắn qua điện thoại, khách chưa muốn kể thêm.',l:'C'}]},
+    {id:'K-0455',name:'Lê Thu Hà',goi:'DCA',st:'on',kim:'Dgo',neLit:'N',ev:'Hồ sơ lớp nền còn thiếu',due:'Còn 3 ngày',ch:'Email',last:'15/11',
+      ne:{V:'«Mình muốn có nhà riêng trước tuổi 40.»',N:'',D:'',G:'',O:''},tl:[{t:'15/11',w:'khach',x:'«Mình muốn có nhà riêng trước tuổi 40.»',l:''}]},
+    {id:'K-0461',name:'Phạm Gia Huy',goi:'DCA',st:'on',kim:'Dinvest',neLit:'G',ev:'Hồ sơ đủ, chờ nháp kế hoạch',due:'Còn 5 ngày',ch:'Zalo',last:'17/11',
+      ne:{V:'«Mình muốn có nguồn thu thứ hai ngoài lương.»',N:'«Mình đã có quỹ dự phòng sáu tháng.»',D:'',G:'',O:''},tl:[{t:'17/11',w:'ca',x:'Đọc KYC và NRX cùng khách, hồ sơ lớp nền đã đủ.',l:'N · C'}]},
+    {id:'K-0301',name:'Vũ Hải Yến',goi:'DA',st:'in',kim:'Dinvest',neLit:'G',ev:'Khách tự chủ hỏi trên app',due:'Đội chăm số giữ',ch:'App Dcare',last:'19/11',ne:{V:'',N:'',D:'',G:'',O:''},tl:[]},
+    {id:'K-0277',name:'Đỗ Thanh Tùng',goi:'DMA',st:'in',kim:'Dvalues',neLit:'O',ev:'Kỳ đọc lại theo đối tác',due:'Partner giữ nhịp',ch:'Qua đối tác',last:'10/11',ne:{V:'',N:'',D:'',G:'',O:''},tl:[]},
+    {id:'K-0190',name:'Bùi Lan Chi',goi:'DCA',st:'out',kim:'Dcare',neLit:'D',ev:'Đã ngủ: một người khác CA hỏi vì sao rời',due:'Chờ người hỏi',ch:'Email',last:'01/10',ne:{V:'«Mình muốn đi du học.»',N:'',D:'',G:'',O:''},tl:[]}
+  ];
+  khach[0].st='in'; // K-0412 đang đồng hành
+  function K(id){return khach.filter(function(k){return k.id===id})[0]}
+  var threads=[
+    {id:'t1',kid:'K-0412',ch:'Zalo',time:'09:40',st:'needs',own:'me',ev:'Biến cố thị trường',nep:'D · Soi Sáng',kim:'Dcare',risk:'cam',
+      msgs:[['k','Thị trường rớt mấy hôm nay, em có nên bán bớt không?']],
+      read:'Khách đang cân nhắc phá nguyên tắc mình tự đặt. Đây là lúc cần giữ kỷ luật khách tự đặt (D · Soi Sáng), kim sáng là Dcare.',
+      draft:'Chào anh Minh Anh, em thấy mấy hôm nay thị trường làm anh lo. Hôm 28/10 anh có nói «mình tự hứa không bán chỉ vì thị trường giảm vài tháng». Anh muốn mình ngồi 15 phút xem lại nguyên tắc ấy cùng nhau không ạ? Quyết định vẫn là của anh, em ở cạnh anh.',
+      checks:[['Không khuyên mua bán','ok'],['Không mã, không dự phóng lãi','ok'],['Trích đúng lời khách','ok'],['Quyết định là của khách','ok']]},
+    {id:'t2',kid:'K-0388',ch:'Hotline',time:'08:55',st:'needs',own:'me',ev:'Liên quan tiền',nep:'Thao tác ngoài la bàn',kim:'Dcare',risk:'high',
+      msgs:[['k','(Ghi âm 2 phút, máy chép lời) Tôi muốn đổi số tài khoản nhận tiền.']],
+      read:'Đổi thông tin tài khoản và dòng tiền là bước cố định, cần xác minh danh tính. Máy không soạn thay.',draft:'',checks:[]},
+    {id:'t3',kid:'K-0455',ch:'Email',time:'Hôm qua',st:'needs',own:'me',ev:'',nep:'N · La Bàn',kim:'Dgo',risk:'low',
+      msgs:[['k','Hồ sơ của em còn thiếu giấy tờ gì ạ?']],
+      read:'Câu hỏi về hồ sơ lớp nền. Kim Dgo sáng, nếp N · La Bàn. CA đọc KYC cùng khách, không điền hộ.',
+      draft:'Chào chị Thu Hà, hồ sơ của chị còn thiếu bản sao CCCD mặt sau và xác nhận thu nhập. Chị gửi giúp em khi tiện, em hẹn chị một buổi 20 phút để cùng đọc phần nhu cầu của chị nhé.',
+      checks:[['Không điền hộ khách','ok'],['Không chào bán sản phẩm','ok']]},
+    {id:'t4',kid:'K-0301',ch:'App Dcare',time:'07:30',st:'team',own:'team',ev:'',nep:'G · Tích Năng Lực',kim:'Dinvest',risk:'low',
+      msgs:[['k','Làm sao đổi nhịp góp hằng tháng?']],read:'Khách gói DA, đội chăm sóc trên nền số giữ. CA không phải xử lý.',draft:'',checks:[]}
+  ];
+  var tickets=[
+    {id:'T-201',kid:'K-0412',title:'Hỏi có nên bán khi thị trường giảm',kim:'Dcare',nep:'D · Soi Sáng',ch:'Zalo',st:'Chờ CA',due:'Hôm nay'},
+    {id:'T-202',kid:'K-0388',title:'Đổi số tài khoản nhận tiền',kim:'Dcare',nep:'—',ch:'Hotline',st:'Chờ CA',due:'Hôm nay'},
+    {id:'T-203',kid:'K-0455',title:'Hỏi giấy tờ còn thiếu',kim:'Dgo',nep:'N · La Bàn',ch:'Email',st:'Chờ CA',due:'Còn 2 ngày'},
+    {id:'T-204',kid:'K-0301',title:'Đổi nhịp góp hằng tháng',kim:'Dinvest',nep:'G · Tích Năng Lực',ch:'App Dcare',st:'Đội chăm số',due:'—'},
+    {id:'T-205',kid:'K-0461',title:'Nháp kế hoạch Dinvest',kim:'Dinvest',nep:'G · Tích Năng Lực',ch:'—',st:'Chờ Pháp chế',due:'Còn 5 ngày'},
+    {id:'T-206',kid:'K-0277',title:'Đọc lại kết quả theo đối tác',kim:'Dvalues',nep:'O · Sống Đầu Tư',ch:'Qua đối tác',st:'Partner',due:'—'},
+    {id:'T-207',kid:'K-0190',title:'Hỏi vì sao rời',kim:'Dcare',nep:'D · Soi Sáng',ch:'Email',st:'Chờ người hỏi',due:'—'}
+  ];
+  var SEED=[
+    {kid:'K-0412',card:{t:'Tờ đọc lại kế hoạch · K-0412',st:'open',checks:[['Lời khách nguyên văn','ok'],['Số khớp sổ (lệch dưới 0,5%)','ok'],['Không xếp hạng khách','ok']],
+      b:'Đích khách tự đặt: «Một khoản để con đi học nước ngoài năm 2035».\nTiến độ góp: đủ nhịp 5 kỳ liên tiếp.\nKim đang lệch: Dcare, thị trường giảm 3 ngày, khách đang hỏi có nên bán.\nBa câu hỏi mở: (1) Điều gì làm anh lo nhất lúc này? (2) Nguyên tắc anh tự đặt hôm 28/10 còn đúng không? (3) Anh muốn mình làm gì cạnh anh?'}},
+    {kid:'K-0412',card:{t:'Dấu vết chăm · buổi 12/11',st:'open',checks:[['Lời khách nguyên văn','ok'],['Máy không chấm CA','ok']],
+      b:'Khách kể lại đích bằng lời mình. Chữ đã chạm: V · N · C. Thiếu: A · R · E · S.\nHẹn lại: 19/11. Nhắc CA: soi giao dịch cùng khách nếu khách muốn bán.'}},
+    {kid:'K-0388',card:{t:'Danh sách: tài khoản chạy mà người đứng yên 3 kỳ',st:'open',checks:[['Không đưa điểm CMI cho khách','ok'],['Đọc cả hai tầng','ok']],
+      b:'K-0388: tài khoản chạy đủ ba kỳ, chưa có buổi đọc lại đích. Máy đề xuất mời đọc lại đích, không đưa điểm.'}},
+    {kid:'K-0461',card:{t:'Nháp kế hoạch Dinvest · K-0461',st:'waiting',checks:[['Không gợi ý mã','ok'],['Không dự phóng lãi','ok'],['Chạm ranh tư vấn đầu tư','bad']],
+      b:'Đường đi từng lớp của tháp HWG, đi từ lớp H lên, theo track khách đủ điều kiện. Không có mã, không dự phóng lãi.\nKhách tự đặt nhịp góp; CA có chứng chỉ hành nghề là người trình.\nChờ Pháp chế xác nhận ai được trình và trình thế nào.'}},
+    {kid:'K-0455',card:{t:'Đối soát giá trị tài sản · K-0455',st:'failed',checks:[['Số không khớp thì dừng','bad']],
+      b:'Giá trị tài sản lệch sổ lưu ký 0,9%, vượt ngưỡng 0,5%. Máy dừng, không tạo tờ đọc lại.'}}
+  ];
+  var NOTES=[
+    {id:'n1',t:'Cẩm nang khách bản 1.0 chờ Tuân thủ duyệt',x:'Chưa phát tới khách. Khi nào duyệt xong, mục "Ba cách được đi cùng" sẽ là chuẩn khi bạn giới thiệu với khách.',from:'Head CU_VNDCARE · thông báo mẫu',read:false,asks:[]},
+    {id:'n2',t:'Phiếu VNDCARE Agent bản 0.1 đang chờ đọc lan can',x:'Pháp chế và CGC đang đọc. Trong lúc chờ, máy chỉ chuẩn bị cho bạn, không liên lạc khách.',from:'Chủ sở hữu · thông báo mẫu',read:false,asks:[]}
+  ];
+  var logs=[
+    {t:'09:12',a:'agent',n:'VNDCARE Agent',kid:'K-0412',ev:'advice_logged',what:'Soạn nháp trả lời Zalo K-0412 (chưa gửi)',src:'Tin của khách 09:40',cost:2,st:'Chờ CA',cls:'warn',steps:[['Đầu vào','Tin Zalo của khách'],['Máy tính','Nhận diện nếp D, kim Dcare'],['Kết quả','Bản nháp, kiểm lan can đạt']]},
+    {t:'08:00',a:'agent',n:'VNDCARE Agent',kid:'',ev:'touch_held',what:'Tóm tắt sáng cho 3 khách',src:'Nhịp mỗi sáng',cost:2,st:'Tự động',cls:'ok',steps:[['Đầu vào','CMS + CU_BIS'],['Kết quả','Danh sách chia theo người nhận']]},
+    {t:'Hôm qua',a:'human',n:'Hà Trần',kid:'K-0461',ev:'advice_logged',what:'Ghi dấu vết chăm K-0461: đọc KYC và NRX cùng khách',src:'Sau buổi gặp 17/11',cost:0,st:'Đã ghi',cls:'ok',steps:[['Thao tác','CA ghi chú sau buổi'],['Chữ đã chạm','N · C']]}
+  ];
+  var HELPN={'Pháp lý / tuân thủ':['Ngô Văn Sơn','Compliance Officer'],'Sản phẩm / kế hoạch':['Đặng Thu Phương','PO · PM'],'Kỹ thuật / app':['Hoàng Anh Tú','CA Service'],'Tôi đang đuối':['Lê Quốc Việt','Mentor · iLEAD Partner']};
+  var HELPR={'Compliance Officer':'Mình đã xem. Nếu có nháp kế hoạch hay lời khuyên cụ thể, cần Pháp chế đọc việc ③ trước khi trình. (phản hồi mẫu)','PO · PM':'Mình xem lại phần sản phẩm khách đủ điều kiện và báo lại trong ngày. (phản hồi mẫu)','CA Service':'Mình kiểm tra phía app và báo bạn. (phản hồi mẫu)','Mentor · iLEAD Partner':'Mình nghe đây. Bạn kể mình nghe buổi gặp vừa rồi nhé. (phản hồi mẫu)'};
+  var HAND=['Hồ sơ la bàn giữ nguyên lời khách','Dấu vết chăm và lịch sử buổi gặp','Kế hoạch đang chạy và đích khách tự đặt','Nhịp đã hẹn còn lại và biến cố đang mở','Người đỡ đã biết khách (iLink)','Lời giới thiệu người mới với khách'];
+  var MET={
+    khach:[['Khách lên một bậc vị thế','so với chính họ kỳ trước',58,'Đọc từ AMS + TMS, mỗi khách so với chính mình.'],['Khách giữ kỷ luật khi thị trường giảm','không bán tháo trái luật họ tự đặt',72,'Đọc từ TMS khi có biến cố, so với luật khách tự đặt.'],['Chạm đúng nhịp đã hứa','kể cả kỳ không có giao dịch',81,'Sự kiện touch_held so với nhịp của gói (SLA).'],['Khách ở lại khi có biến cố hay khi CA đổi','đọc lúc biến cố',90,'Đọc lúc biến cố, không đợi cuối kỳ.'],['Khách tự đọc được Dvalues','buổi đọc lại theo kỳ',44,'Sự kiện compass_selfread trên app VNDGO.']],
+    nghe:[['Số ngày đọc đủ bốn kim','đếm ngày, không chấm nội dung',70,'Đếm ngày compass_selfread của chính CA.'],['Lượt soi đủ ba bậc','đếm lượt, không chấm nội dung',50,'Sự kiện ipax_round_completed.'],['Khoản năng lực nghề đã khớp','đọc từ FVH, FD Lead xác nhận',40,'Đọc từ FVH, FD Lead xác nhận.']]
+  };
+  var CMDS={'/chuanbi':'Chuẩn bị tờ đọc lại','/tomtat':'Lời khách nguyên văn','/ketthuc':'Nhìn lại sau buổi gặp','/bangiao':'Bàn giao khách','/thuoc':'Mở tab Thước','/tudien':'Từ điển'};
+
+  /* ================= Trạng thái ================= */
+  var state={view:'dashboard',room:'K-0412',ctab:'ho-so',ne:'D',role:'ca',hopSel:'t1',hopF:'all',hopCh:'all',how:{},selfread:{iGo:true,iWork:true,iLink:false,iValues:false},
+    kg:{sel:'p-kk',msg:'',draft:null},saved:[]};
+  function ro(){return state.role==='audit'}
+  var rooms={};
+  function seed(id){
+    if(id==='hom-nay')return {msgs:[{s:'ag',x:'Chào Hà. Sáng nay mình đã chuẩn bị tóm tắt cho ba khách. Mình chuẩn bị, bạn nói chuyện với khách. Gặp từ lạ, bấm Từ điển ở góc trên.',t:'08:00'},{s:'ag',card:{kind:'morning'},t:'08:00'},{s:'ag',card:{kind:'self'},t:'08:00'},{s:'ag',card:{t:'Câu thử của tuần · La Bàn',b:'Trong kỳ này bạn đọc đủ bốn kim bao nhiêu ngày, và điều bạn tự thấy có khớp với điều đội thấy không?',st:'done',plain:1,noact:1},t:'08:00'}]};
+    if(id==='nha')return {msgs:[{s:'sys',x:'Kênh của nhà. Thông báo mẫu.'}].concat(NOTES.map(function(n){return {s:'ag',who:n.from.split(' · ')[0],card:{kind:'note',id:n.id},t:'Hôm qua'}}))};
+    var k=K(id);var m=[{s:'sys',x:'Phòng chăm khách đã mở. Khách không ở trong phòng. Máy chỉ chuẩn bị, không liên lạc khách.'}];
+    if(k.goi!=='DCA')m.push({s:'sys',x:'Khách gói '+k.goi+' ('+GOI[k.goi]+'): CA không giữ nhịp. Phòng chỉ để đọc.'});
+    m.push({s:'ag',x:'Mình đã đọc hồ sơ '+k.id+'. Gõ /chuanbi, /tomtat hoặc /ketthuc, hoặc nhắc @trợ lý.',t:'08:00'});
+    SEED.filter(function(c){return c.kid===id}).forEach(function(c){m.push({s:'ag',card:JSON.parse(JSON.stringify(c.card)),t:'09:00'})});
+    return {members:[['ca','Hà Trần','CA, bạn'],['ag','VNDCARE Agent','khi @ nhắc']],msgs:m};
+  }
+  function R(id){return rooms[id]||(rooms[id]=seed(id))}
+  function post(id,m){m.t=m.t||'Vừa xong';R(id).msgs.push(m);refresh()}
+  function pushLog(l){logs.unshift(l)}
+  function openIn(id){return R(id).msgs.filter(function(m){return m.card&&m.card.st==='open'}).length}
+  function allOpen(){var n=0;khach.forEach(function(k){n+=openIn(k.id)});return n}
+
+  /* ================= Điều hướng ================= */
+  var TITLE={dashboard:['Hôm nay của tôi','Việc cần làm trước'],'hop-cham':['Hộp chăm','Mọi kênh khách tìm đến'],'cho-doc':['Chờ tôi đọc','Bản máy chờ CA đọc và quyết'],'khong-gian':['Khách','Danh sách, ticket và view tự dựng'],'cai-dat':['Cài đặt','Trợ lý, quyền và lan can']};
+  function roomTitle(id){if(id==='hom-nay')return ['# hom-nay','Trợ lý của bạn'];if(id==='nha')return ['# nha','Lời của nhà'];var k=K(id);return ['# '+k.id+' · '+k.name,STAGE[k.st][0]+' · '+k.goi]}
+  function rbtn(id,label,pill){var on=state.view==='phong'&&state.room===id;return '<button data-room="'+id+'"'+(on?' aria-current="page"':'')+'><span class="ic">#</span>'+esc(label)+(pill?'<span class="pill num">'+pill+'</span>':'')+'</button>'}
+  function renderNav(){
+    var hop=threads.filter(function(t){return t.st==='needs'}).length,cho=allOpen();
+    function it(v,l,p,ic){return '<button data-go="'+v+'"'+(state.view===v?' aria-current="page"':'')+'><span class="ic">'+ic+'</span>'+l+(p?'<span class="pill num">'+p+'</span>':'')+'</button>'}
+    $('#nav').innerHTML=it('dashboard','Hôm nay',hop+cho,'◎')+it('hop-cham','Hộp chăm',hop,'✉')+it('khong-gian','Khách',0,'▦');
+    var gs=[['on','Khách của tôi'],['in',''],['out','']];
+    $('#roomNav').innerHTML=gs.map(function(g){var ks=khach.filter(function(k){return k.st===g[0]&&k.goi==='DCA'});if(!ks.length)return '';return (g[1]?'<div class="nav-g">'+g[1]+'</div>':'')+ks.map(function(k){return rbtn(k.id,k.id+' '+k.name.split(' ').slice(-1)[0],openIn(k.id)+threads.filter(function(t){return t.kid===k.id&&t.st==='needs'}).length)}).join('')}).join('');
+    var un=NOTES.filter(function(n){return !n.read}).length;
+    $('#chanNav').innerHTML='<div class="nav-g">Kênh</div>'+rbtn('hom-nay','hom-nay',0)+rbtn('nha','nha',un);
+  }
+  function route(){
+    var h=(location.hash||'').replace('#','');if(h!=='phong'&&!TITLE[h])h=state.view==='phong'&&!h?'phong':'dashboard';state.view=h;
+    $$('.view').forEach(function(v){v.classList.toggle('on',v.id==='v-'+h)});
+    if(h!=='phong')$('#canvasBtn').hidden=true;var tt2=h==='phong'?roomTitle(state.room):TITLE[h];$('#title').textContent=tt2[0];$('#subtitle').textContent=tt2[1];
+    document.body.classList.remove('side-open');$('#canvas').classList.remove('show');
+    refresh();
+  }
+  function go(v,roomId){if(roomId)state.room=roomId;if(location.hash==='#'+v)route();else location.hash=v}
+  window.addEventListener('hashchange',route);
+  function refresh(){
+    renderNav();var h=state.view;
+    if(h==='phong')renderPhong();
+    else{var el=$('#v-'+h),st=el.scrollTop;el.innerHTML=({dashboard:vDash,'hop-cham':vHop,'cho-doc':vCho,'khong-gian':vKG,'cai-dat':vSet})[h]();el.scrollTop=st}
+  }
+
+  /* ================= La bàn (dashboard) ================= */
+  function kbadge(k){return '<span class="badge gray">'+k.goi+'</span>'}
+  function vDash(){
+    var sr=state.selfread,days=11+(sr.iGo&&sr.iWork&&sr.iLink&&sr.iValues?1:0);
+    var todo=[];
+    threads.filter(function(t){return t.st==='needs'}).forEach(function(t){var k=K(t.kid);todo.push({kid:k.id,why:'Khách nhắn qua '+t.ch+' lúc '+t.time,what:t.msgs[0][1],btn:'<button class="btn primary" data-todo="'+t.id+'">Trả lời</button>',hot:t.risk==='high'})});
+    khach.forEach(function(k){var n=openIn(k.id);if(n)todo.push({kid:k.id,why:'Máy đã chuẩn bị '+n+' bản, chờ bạn đọc',what:'Đọc, sửa nếu cần rồi bấm dùng.',btn:'<button class="btn" data-room="'+k.id+'">Đọc bản máy</button>'})});
+    todo.push({kid:'K-0412',why:'Hẹn hôm nay 15:00',what:'Ngồi cùng khách xem lại nguyên tắc họ tự đặt (D · Soi Sáng).',btn:'<button class="btn" data-room="K-0412">Chuẩn bị buổi hẹn</button>'});
+    var cnt=function(s){return khach.filter(function(k){return k.st===s}).length};
+    var tour=state.tour?'':'<div class="panel soft"><div class="ph"><h3>Bắt đầu trong 3 bước</h3><span class="sp"></span><button class="btn sm" data-tour="1">Đã hiểu</button></div><ol style="margin:4px 0 0;padding-left:20px;line-height:1.7"><li>Xem <b>việc hôm nay</b> bên dưới, bấm nút ở từng dòng.</li><li>Trong phòng khách, bấm nút to để chuẩn bị, ghi lại hoặc bàn giao. Máy chỉ soạn nháp, <b>bạn mới là người gửi cho khách</b>.</li><li>Gặp chữ lạ (iGo, Be-on, kim sáng...) bấm <b>Từ điển</b> ở góc phải trên.</li></ol></div>';
+    var byKim=KIMS.map(function(kim){var ks=khach.filter(function(k){return k.kim===kim});return '<button class="tile" data-go="khong-gian"><b class="num">'+ks.length+'</b><span>'+kim+' sáng</span></button>'}).join('');
+    var pins=state.saved.filter(function(v){return v.pin}).map(function(v){return '<div class="panel"><div class="ph"><h3>'+esc(v.name)+'</h3><span class="badge ag">Từ Khách</span></div>'+renderData(v,true)+'</div>'}).join('');
+    function met(key,title,sub){return '<div class="panel"><h3>'+title+'</h3><p>'+sub+'</p>'+MET[key].map(function(m,i){var id=key+i;return '<div class="metric"><div class="h"><b>'+m[0]+'</b><span class="src">'+m[1]+'</span></div><div class="bar" role="img" aria-label="Giá trị mẫu"><i style="width:'+m[2]+'%"></i></div><div class="row"><button class="lnk" data-how="'+id+'">'+(state.how[id]?'Ẩn cách tính':'Xem cách tính')+'</button><span class="badge gray">mẫu</span></div><div class="how"'+(state.how[id]?'':' hidden')+'>'+m[3]+'</div></div>'}).join('')+'</div>'}
+    return tour
+    +'<div class="sec-h">Việc hôm nay · '+todo.length+' việc</div><div class="klist">'+todo.map(function(x){return '<div class="panel"><div class="row"><div style="flex:1;min-width:220px"><div class="row"><b>'+esc(x.kid)+' · '+esc(K(x.kid).name)+'</b>'+(x.hot?'<span class="badge warn">Liên quan tiền, nên đọc kỹ</span>':'')+'</div><span class="src">'+esc(x.why)+'</span><p style="margin:4px 0 0">'+esc(x.what)+'</p></div>'+x.btn+'</div></div>'}).join('')+'</div>'
+    +'<details class="panel" style="margin-top:20px"><summary style="cursor:pointer"><b>Tôi đang đi thế nào (iCompass tự soi · iValues)</b> <span class="src">mở để xem</span></summary><div class="sec-h">Khách của tôi theo kim</div><div class="grid g4">'+byKim+'<div class="tile"><b class="num">'+cnt('on')+' · '+cnt('in')+' · '+cnt('out')+'</b><span>Mới đón · Đồng hành · Rời hoặc ngủ</span></div></div>'
+    +'<div class="sec-h">Tự soi hôm nay</div><div class="grid g4">'+[['iGo','Tôi là ai trong nghề'],['iWork','Tôi đi đường nào, với khách nào'],['iLink','Ai nối tôi'],['iValues','Tôi ở đâu so với đích']].map(function(a){return '<label class="tgl act"><input type="checkbox" data-sr="'+a[0]+'"'+(sr[a[0]]?' checked':'')+'> <span><b>'+a[0]+'</b> · '+a[1]+'</span></label>'}).join('')+'</div><p>Đã đọc đủ bốn kim <b>'+days+'</b> ngày trong kỳ. Chỉ đếm số ngày, không chấm nội dung bạn viết. Không có điểm.</p>'
+    +'<div class="sec-h">Việc tôi đã làm được</div><div class="grid g4"><div class="tile"><b class="num">'+(9+logs.filter(function(l){return l.st==='Đã gửi'}).length)+'</b><span>Lần chăm khách tuần này (mẫu)</span></div><div class="tile"><b class="num">5/6</b><span>Hẹn đã giữ đúng giờ (mẫu)</span></div></div>'
+    +'<div class="grid g2" style="margin-top:12px">'+met('khach','Khách của tôi lớn lên','Mỗi khách so với chính họ kỳ trước.')+met('nghe','Nghề của tôi lớn lên','Người làm nghề xem được cách con số của mình được tính. Doanh số không phải thước chính.')+'</div></details>'
+    +(pins?'<div class="sec-h">Ghim từ Khách</div><div class="grid g2">'+pins+'</div>':'');
+  }
+
+  /* ================= Hộp chăm ================= */
+  var CHS=['Zalo','Hotline','Email','App Dcare'];
+  function vHop(){
+    var f=state.hopF,ch=state.hopCh;
+    var list=threads.filter(function(t){return (f==='all'||(f==='needs'?t.st==='needs':f==='mine'?t.own==='me':t.own==='team'))&&(ch==='all'||t.ch===ch)});
+    if(list.length&&!list.some(function(t){return t.id===state.hopSel}))state.hopSel=list[0].id;
+    var sel=list.length?threads.filter(function(t){return t.id===state.hopSel})[0]:null;
+    function chip(a,k,l){return '<button class="chip" data-'+a+'="'+k+'" aria-pressed="'+((a==='hf'?f:ch)===k)+'">'+l+'</button>'}
+    return '<p class="lead">Mọi kênh khách tìm đến về một chỗ. Máy đọc ý định, gắn nếp và kim sáng, soạn sẵn bản nháp. <b>CA đọc, sửa và là người trả lời khách.</b> Máy không nhắn khách. Muốn làm việc sâu với khách, mở phòng của khách.</p>'
+    +'<div class="filters">'+chip('hf','all','Tất cả')+chip('hf','needs','Chưa trả lời ('+threads.filter(function(t){return t.st==='needs'}).length+')')+chip('hf','mine','Của tôi')+chip('hf','team','Đội chăm số')+'<span class="src" style="margin:0 4px">Kênh:</span>'+chip('hc','all','Tất cả')+CHS.map(function(c){return chip('hc',c,c+' ('+threads.filter(function(t){return t.ch===c}).length+')')}).join('')+'</div>'
+    +'<div class="two"><div class="list">'+(list.map(function(t){var k=K(t.kid),s=t.st==='needs'?['Chờ CA','warn']:t.st==='done'?['Đã trả lời','ok']:['Đội chăm số giữ','gray'];return '<button class="li" data-th="'+t.id+'" aria-pressed="'+(t.id===state.hopSel)+'"><span class="r"><span class="t">'+esc(k.id)+' · '+esc(k.name)+'</span><span class="s">'+t.time+'</span></span><span class="s">'+t.ch+' · '+esc(t.msgs[0][1]).slice(0,56)+(t.msgs[0][1].length>56?'…':'')+'</span><span class="r"><span class="badge '+s[1]+'">'+s[0]+'</span>'+(t.ev?'<span class="badge warn">'+esc(t.ev)+'</span>':'')+'</span></button>'}).join('')||'<div class="empty">Không có tin nào.</div>')+'</div><div class="detail">'+(sel?thread(sel):'<div class="empty" style="border:0">Chọn một tin.</div>')+'</div></div>';
+  }
+  function thread(t){
+    var k=K(t.kid),convo=t.msgs.map(function(m){return '<div class="msg'+(m[0]==='ca'?' me':'')+'">'+esc(m[1])+'</div>'}).join('');
+    var body='';
+    if(t.st==='team')body='<div class="gate"><b>Khách gói DA · tự chủ trên nền số</b><span class="src">Hệ thống nhắc nhịp, đội chăm sóc giữ. VNDGO Agent (trả lời khách trực tiếp) chưa mở, xem Cài đặt.</span></div>';
+    else if(t.risk==='high')body='<div class="gate"><b>Bước cố định, máy không làm</b><span>Đổi thông tin tài khoản hoặc dòng tiền cần xác minh danh tính theo quy trình. CA xử lý, máy không soạn thay.</span><div class="row act"><button class="btn sm" data-toast="Đã mở quy trình xác minh danh tính (mẫu).">Mở quy trình xác minh</button></div></div>';
+    else body='<div><h4>Bản máy soạn cho CA</h4><textarea class="draft" id="draft" aria-label="Bản nháp"'+(t.st==='done'?' readonly':'')+'>'+esc(t.draft)+'</textarea></div><div class="checks">'+t.checks.map(function(c){return '<span class="badge '+c[1]+'">✓ '+esc(c[0])+'</span>'}).join('')+'</div>';
+    var foot=(t.st==='needs'&&t.risk!=='high')?'<div class="d-f act"><button class="btn primary" data-send="'+t.id+'">CA gửi cho khách</button><button class="btn" data-room="'+k.id+'">Mở phòng</button><button class="btn" data-assign="'+t.id+'">Chuyển đội chăm số</button><span class="src" style="margin-left:auto">Gửi là việc của CA. Ước tính 2 credit.</span></div>':'<div class="d-f"><button class="btn" data-room="'+k.id+'">Mở phòng</button></div>';
+    return '<div class="d-h"><span class="av">'+esc(ini(k.name))+'</span><span class="t">'+esc(k.id)+' · '+esc(k.name)+'</span><span class="sp"></span><span class="badge gray">'+t.ch+'</span><span class="badge gray">'+k.goi+'</span></div><div class="d-b"><div class="convo">'+convo+'</div><div><h4>Máy đọc được gì</h4><div class="row"><span class="badge ag">'+esc(t.nep)+'</span><span class="kim on">'+t.kim+'</span></div><p style="margin:6px 0 0;color:var(--muted);font-size:13px">'+esc(t.read)+'</p></div>'+body+'</div>'+foot;
+  }
+
+  /* ================= Chờ tôi đọc ================= */
+  function vCho(){
+    var items=[];khach.forEach(function(k){R(k.id).msgs.forEach(function(m,i){if(m.card&&m.card.st&&m.card.kind===undefined&&m.card.st!=='done'&&m.card.st!=='dropped')items.push({k:k,c:m.card})})});
+    var open=items.filter(function(x){return x.c.st==='open'}),other=items.filter(function(x){return x.c.st!=='open'});
+    var S={open:['CA cần đọc','warn'],waiting:['Chờ Pháp chế','gray'],failed:['Máy dừng','bad']};
+    function li(x){var s=S[x.c.st];return '<div class="panel"><div class="ph"><b>'+esc(x.c.t)+'</b><span class="sp"></span><span class="badge '+s[1]+'">'+s[0]+'</span></div><span class="src">Phòng '+esc(x.k.id)+' · '+esc(x.k.name)+'</span><div class="row"><span class="kim on">'+x.k.kim+'</span>'+x.c.checks.map(function(c){return '<span class="badge '+c[1]+'">'+(c[1]==='ok'?'✓ ':'✕ ')+esc(c[0])+'</span>'}).join('')+'</div><div class="row"><button class="btn sm primary" data-room="'+x.k.id+'">Mở phòng để quyết</button></div></div>'}
+    return '<p class="lead">Mọi bản máy chờ bạn, gom từ tất cả các phòng. Bấm để vào đúng phòng, đọc cùng hồ sơ, rồi quyết ngay trong luồng.</p><div class="sec-h">CA cần đọc ('+open.length+')</div><div class="grid g2">'+(open.map(li).join('')||'<div class="empty">Không còn bản máy nào chờ bạn.</div>')+'</div><div class="sec-h">Đang chờ người khác hoặc máy đã dừng ('+other.length+')</div><div class="grid g2">'+(other.map(li).join('')||'<div class="empty">Không có.</div>')+'</div>';
+  }
+
+  /* ================= Không gian: tự dựng giao diện từ dữ liệu ================= */
+  var OBJ={khach:{label:'Khách',cols:[['id','Mã'],['name','Tên'],['goi','Gói'],['stage','Chặng'],['kim','Kim sáng'],['nep','Nếp'],['ev','Biến cố'],['due','Nhịp hẹn'],['ch','Kênh'],['last','Chạm gần nhất']],filters:[['dca','Gói DCA'],['today','Đến hạn hôm nay'],['ev','Có biến cố']]},
+    ticket:{label:'Ticket',cols:[['id','Mã'],['kid','Khách'],['title','Yêu cầu'],['kim','Kim sáng'],['nep','Nếp'],['ch','Kênh'],['st','Trạng thái'],['due','Hạn']],filters:[['needs','Chờ CA'],['today','Hạn hôm nay']]}};
+  var GROUPS={khach:[['kim','Kim sáng'],['stage','Chặng'],['goi','Gói']],ticket:[['kim','Kim sáng'],['st','Trạng thái'],['ch','Kênh']]};
+  var PRESET=[
+    {id:'p-kk',name:'Khách theo bốn kim',obj:'khach',group:'kim',type:'bang',filters:{},cols:['id','name','goi','stage','ev','due'],builtin:1},
+    {id:'p-tk',name:'Ticket theo bốn kim',obj:'ticket',group:'kim',type:'bang',filters:{},cols:['id','kid','title','nep','ch','st','due'],builtin:1},
+    {id:'p-kc',name:'Khách theo chặng',obj:'khach',group:'stage',type:'kanban',filters:{},cols:['id','name','kim','due'],builtin:1}
+  ];
+  function rows(cfg){
+    var r=cfg.obj==='khach'?khach.map(function(k){return {id:k.id,name:k.name,goi:k.goi,stage:STAGE[k.st][0].split(' · ')[0],kim:k.kim,nep:NE.filter(function(n){return n.k===k.neLit})[0].k+' · '+NE.filter(function(n){return n.k===k.neLit})[0].n,ev:k.ev,due:k.due,ch:k.ch,last:k.last,_dca:k.goi==='DCA',_today:/Hôm nay/.test(k.due),_ev:!!k.ev}}):tickets.map(function(t){var k=K(t.kid);return {id:t.id,kid:t.kid+' · '+k.name.split(' ').slice(-1)[0],title:t.title,kim:t.kim,nep:t.nep,ch:t.ch,st:t.st,due:t.due,_needs:t.st==='Chờ CA',_today:t.due==='Hôm nay'}});
+    var f=cfg.filters||{};
+    return r.filter(function(x){return (!f.dca||x._dca)&&(!f.today||x._today)&&(!f.ev||x._ev)&&(!f.needs||x._needs)});
+  }
+  function groupOrder(g,rs){if(g==='kim')return KIMS;var o=[];rs.forEach(function(x){if(o.indexOf(x[g])<0)o.push(x[g])});return o}
+  function renderData(cfg,compact){
+    var rs=rows(cfg),gs=groupOrder(cfg.group,rs),cols=OBJ[cfg.obj].cols.filter(function(c){return cfg.cols.indexOf(c[0])>=0});
+    if(cfg.type==='kanban')return '<div class="kanban">'+gs.map(function(g){var xs=rs.filter(function(x){return x[cfg.group]===g});return '<div class="kcol"><h3><span>'+esc(g)+'</span><span class="src num">'+xs.length+'</span></h3>'+xs.map(function(x){return '<div class="krow"><span class="t">'+esc(x[cols[0]?cols[0][0]:'id'])+(cols[1]?' · '+esc(x[cols[1][0]]):'')+'</span>'+cols.slice(2).map(function(c){return '<span class="src">'+c[1]+': '+esc(x[c[0]])+'</span>'}).join('')+'</div>'}).join('')+'</div>'}).join('')+'</div>';
+    return gs.map(function(g){var xs=rs.filter(function(x){return x[cfg.group]===g});
+      return '<div class="'+(compact?'':'panel')+'" style="margin-bottom:12px"><div class="ph"><h3>'+(cfg.group==='kim'?'<span class="kim on">'+g+'</span> <span class="src">'+KGLOSS[g]+'</span>':esc(g))+'</h3><span class="sp"></span><span class="badge gray num">'+xs.length+'</span></div>'+(xs.length?'<div class="tw" style="margin-top:8px"><table><thead><tr>'+cols.map(function(c){return '<th>'+c[1]+'</th>'}).join('')+'</tr></thead><tbody>'+xs.map(function(x){return '<tr>'+cols.map(function(c){return '<td>'+esc(x[c[0]])+'</td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div>':'<p style="margin-top:6px">Không có dòng nào.</p>')+'</div>'}).join('');
+  }
+  function curCfg(){var s=state.kg.sel;if(s==='new')return state.kg.draft;return PRESET.concat(state.saved).filter(function(v){return v.id===s})[0]||PRESET[0]}
+  function newDraft(){return {id:'new',name:'',obj:'khach',group:'kim',type:'bang',filters:{},cols:['id','name','goi','stage','kim','ev','due'],pin:false}}
+  function vKG(){
+    if(state.kg.sel==='new'&&!state.kg.draft)state.kg.draft=newDraft();
+    var cfg=curCfg(),isNew=state.kg.sel==='new';
+    var left='<div class="vlist"><div class="nav-g">Có sẵn · theo bốn kim</div>'+PRESET.map(function(v){return '<button data-kv="'+v.id+'" aria-current="'+(state.kg.sel===v.id)+'">'+esc(v.name)+'</button>'}).join('')+'<div class="nav-g">Của tôi</div>'+(state.saved.map(function(v){return '<button data-kv="'+v.id+'" aria-current="'+(state.kg.sel===v.id)+'">'+esc(v.name)+(v.pin?' <span class="badge ag">ghim</span>':'')+'</button>'}).join('')||'<span class="src" style="padding:4px 10px">Chưa có view nào.</span>')+'<button class="act" data-kv="new" aria-current="'+isNew+'" style="color:var(--primary)">+ Tạo view mới</button></div>';
+    var builder='';
+    if(isNew){var d=state.kg.draft,o=OBJ[d.obj];
+      builder='<div class="panel"><div class="ph"><h3>Tạo view mới</h3><span class="badge ag">dựng từ dữ liệu</span></div>'
+      +'<div class="ask"><input id="kgAsk" placeholder="Nhờ trợ lý dựng, ví dụ: ticket chờ CA nhóm theo kênh" aria-label="Nhờ trợ lý dựng"><button class="btn act" data-kgask="1">Dựng</button></div>'+(state.kg.msg?'<div class="rcard'+(/không/i.test(state.kg.msg.slice(0,40))?' refuse':'')+'" style="max-width:none"><span>'+esc(state.kg.msg)+'</span></div>':'')
+      +'<div class="builder"><label>Đối tượng<select class="sel" id="kgObj">'+Object.keys(OBJ).map(function(k){return '<option value="'+k+'"'+(d.obj===k?' selected':'')+'>'+OBJ[k].label+'</option>'}).join('')+'</select></label><label>Nhóm theo<select class="sel" id="kgGroup">'+GROUPS[d.obj].map(function(g){return '<option value="'+g[0]+'"'+(d.group===g[0]?' selected':'')+'>'+g[1]+'</option>'}).join('')+'</select></label><label>Kiểu hiển thị<select class="sel" id="kgType"><option value="bang"'+(d.type==='bang'?' selected':'')+'>Bảng</option><option value="kanban"'+(d.type==='kanban'?' selected':'')+'>Kanban</option></select></label></div>'
+      +'<div><span class="src">Lọc</span><div class="row">'+o.filters.map(function(f){return '<label class="tgl"><input type="checkbox" data-kf="'+f[0]+'"'+(d.filters[f[0]]?' checked':'')+'> '+f[1]+'</label>'}).join('')+'</div></div>'
+      +'<div><span class="src">Cột</span><div class="row">'+o.cols.map(function(c){return '<label class="tgl"><input type="checkbox" data-kc="'+c[0]+'"'+(d.cols.indexOf(c[0])>=0?' checked':'')+'> '+c[1]+'</label>'}).join('')+'</div></div>'
+      +'<div class="ask"><input id="kgName" value="'+ea(d.name)+'" placeholder="Tên view" aria-label="Tên view" style="border-color:var(--line);background:var(--panel)"><label class="tgl"><input type="checkbox" id="kgPin"'+(d.pin?' checked':'')+'> Ghim vào La bàn</label><button class="btn primary act" data-kgsave="1">Lưu view</button></div>'
+      +'<p>Chỉ có các trường nhà đang giữ. Không có doanh số theo CA, không có điểm hay xếp hạng, nên view nào bạn dựng cũng không thể thành bảng xếp hạng. Khách chỉ là mã và chỉ đọc trường khách đã đồng ý.</p></div>';}
+    return '<p class="lead">Không gian để tự dựng giao diện từ dữ liệu, giống Canvas của Slack. View chạy qua đúng API và quyền như màn khác. Có sẵn danh sách khách và ticket theo bốn kim.</p><div class="kg"><div>'+left+'</div><div class="grid">'+builder+'<div><div class="ph" style="margin-bottom:8px"><h3 style="margin:0">'+esc(cfg.name||'Xem trước')+'</h3><span class="badge gray">'+OBJ[cfg.obj].label+' · nhóm theo '+GROUPS[cfg.obj].filter(function(g){return g[0]===cfg.group})[0][1]+'</span><span class="sp"></span><span class="src">Ticket là bản định nghĩa tạm: một yêu cầu của khách gắn nếp và kim.</span></div>'+renderData(cfg)+'</div></div></div>';
+  }
+  function kgParse(txt){
+    var t=txt.toLowerCase(),d=state.kg.draft;
+    if(/doanh số|xếp hạng|chấm điểm|top |cmi|điểm của khách/.test(t)){state.kg.msg='Mình không dựng view này: nhà không đo doanh số theo CA và không xếp hạng hay chấm điểm khách. Thay vào đó mình có thể nhóm khách theo kim sáng hoặc chặng.';return}
+    d.obj=/ticket|yêu cầu/.test(t)?'ticket':'khach';
+    d.group=/chặng|be-in|be-on|be-out/.test(t)&&d.obj==='khach'?'stage':/gói/.test(t)&&d.obj==='khach'?'goi':/kênh/.test(t)?'ch':/trạng thái/.test(t)&&d.obj==='ticket'?'st':'kim';
+    if(d.obj==='khach'&&d.group==='ch')d.group='kim';
+    d.type=/kanban/.test(t)?'kanban':'bang';
+    d.filters={};if(/dca/.test(t)&&d.obj==='khach')d.filters.dca=1;if(/hôm nay/.test(t))d.filters.today=1;if(/biến cố/.test(t)&&d.obj==='khach')d.filters.ev=1;if(/chờ ca/.test(t)&&d.obj==='ticket')d.filters.needs=1;
+    d.cols=d.cols.filter(function(c){return OBJ[d.obj].cols.some(function(x){return x[0]===c})});if(d.cols.length<3)d.cols=OBJ[d.obj].cols.slice(0,6).map(function(c){return c[0]});
+    state.kg.msg='Đã dựng: '+OBJ[d.obj].label+', nhóm theo '+GROUPS[d.obj].filter(function(g){return g[0]===d.group})[0][1]+', '+(d.type==='kanban'?'kanban':'bảng')+'. Chỉnh thêm bên dưới rồi lưu.';
+  }
+
+  /* ================= Phòng (Slack) ================= */
+  function renderPhong(){
+    var id=state.room,isK=!!K(id),v=$('#v-phong');v.classList.toggle('no-canvas',!isK);$('#canvasBtn').hidden=!isK;$('#canvas').classList.remove('show');
+    var tt2=roomTitle(id);$('#title').textContent=tt2[0];$('#subtitle').textContent=tt2[1];
+    var h;
+    if(isK){var k=K(id),r=R(id);
+      h='<div class="ph"><b># '+esc(k.id)+' · '+esc(k.name)+'</b><span class="kim on" title="Mỗi lúc một kim sáng">'+k.kim+'</span><span class="badge gray">'+k.goi+'</span><span class="badge">'+STAGE[k.st][0]+'</span><span class="sp"></span><button class="btn sm" data-cmd="/bangiao">Bàn giao</button></div>'
+      +'<details class="mem-d"><summary>Người trong phòng ('+r.members.length+') · mời thêm</summary><div class="mem">'+r.members.map(function(m){return '<span class="badge '+(m[0]==='ag'?'ag':'gray')+'">'+esc(m[1])+(m[2]?' · '+esc(m[2]):'')+'</span>'}).join('')+'</div>'
+      +'<div class="invite act"><select id="inviteSel" aria-label="Mời người đỡ"><option value="">Mời người đỡ vào phòng…</option>'+Object.keys(HELPN).map(function(x){return '<option>'+x+'</option>'}).join('')+'</select><button class="btn sm" data-invite="1">Mời</button></div></details>'
+      +'<span class="src">Kim sáng: '+k.kim+' · '+esc(k.ev)+' · Khách không ở trong phòng, phòng ở lại khi CA đổi ghế.</span>';
+    }else h='<div class="ph"><b>'+esc(tt2[0])+'</b><span class="src">'+esc(tt2[1])+'</span></div>';
+    $('#rHead').innerHTML=h;
+    renderMsgs();renderCanvas();
+    $('#rSug').innerHTML=(isK?['/chuanbi','/ketthuc','/bangiao']:['/tudien']).map(function(c){return '<button type="button" data-cmd="'+c+'" title="Hoặc gõ '+c+'">'+({'/chuanbi':'Chuẩn bị gặp khách','/tomtat':'Xem lời khách nói','/ketthuc':'Ghi lại sau buổi gặp','/bangiao':'Bàn giao khách','/thuoc':'Xem thước','/tudien':'Từ điển'})[c]+'</button>'}).join('');
+  }
+  function cardHtml(c,i){
+    if(c.kind==='morning')return '<div class="rcard plain"><b>Tóm tắt sáng (La bàn sáng)</b><span class="src">Máy đề xuất, không xếp hạng. Mỗi khách một kim sáng.</span>'+['K-0412','K-0388','K-0455'].map(function(id){var k=K(id);return '<div class="row-l"><button class="lnk" data-room="'+id+'">'+esc(k.id)+' · '+esc(k.name)+'</button><span class="kim on">'+k.kim+'</span></div>'}).join('')+'</div>';
+    if(c.kind==='self'){var sr=state.selfread,n=11+(sr.iGo&&sr.iWork&&sr.iLink&&sr.iValues?1:0);return '<div class="rcard plain"><b>Tự soi hôm nay (iCompass)</b><div class="row act">'+[['iGo','Tôi là ai trong nghề'],['iWork','Tôi đi đường nào, với khách nào'],['iLink','Ai nối tôi'],['iValues','Tôi ở đâu so với đích']].map(function(a){return '<button class="chip" data-srb="'+a[0]+'" aria-pressed="'+!!sr[a[0]]+'">'+a[0]+' · '+a[1]+'</button>'}).join('')+'</div><span class="src">'+n+' ngày đọc đủ bốn kim trong kỳ. Chỉ đếm, không chấm điểm.</span></div>'}
+    if(c.kind==='note'){var nn=NOTES.filter(function(x){return x.id===c.id})[0];return '<div class="rcard plain"><div class="ph"><b>'+esc(nn.t)+'</b><span class="sp"></span><span class="badge '+(nn.read?'ok':'warn')+'">'+(nn.read?'Đã đọc':'Chưa đọc')+'</span></div><span>'+esc(nn.x)+'</span>'+nn.asks.map(function(a){return '<span class="src">• '+esc(a)+'</span>'}).join('')+'<div class="row act"><button class="btn sm" data-nread="'+nn.id+'"'+(nn.read?' disabled':'')+'>Đã đọc</button></div><form data-nask="'+nn.id+'"><input placeholder="Hỏi lại nhà…" aria-label="Hỏi lại"><button class="btn sm act" type="submit">Gửi</button></form></div>'}
+    if(c.kind==='letters'){var miss=VND.filter(function(v){return !c.letters[v[0]]}).map(function(v){return v[0]});return '<div class="rcard"><b>'+esc(c.t)+'</b><span>Tự hỏi: buổi này mình đã làm được những điều nào trong tám điều nhà hứa với khách, còn thiếu điều nào?</span>'+(c.st==='open'?'<div class="row act">'+VND.map(function(v){return '<button class="chip" data-rl="'+i+'|'+v[0]+'" aria-pressed="'+!!c.letters[v[0]]+'">'+v[0]+' · '+v[1]+'</button>'}).join('')+'</div><div class="row act"><button class="btn sm primary" data-rsave="'+i+'">Ghi vào sổ chăm</button><span class="src">'+(miss.length<8?(miss.length?'Thiếu: '+miss.join(' · '):'Đủ tám chữ.'):'Chọn các chữ đã chạm.')+'</span></div>':'<span><span class="badge ok">Đã ghi vào sổ chăm</span> <span class="src">Chữ đã chạm: '+VND.filter(function(v){return c.letters[v[0]]}).map(function(v){return v[0]}).join(' · ')+'</span></span>')+'</div>'}
+    if(c.kind==='hand'){var all=c.ticks.every(Boolean);return '<div class="rcard"><b>'+esc(c.t)+'</b><span>Khách không phải kể lại từ đầu. Người duyệt phải khác người rời.</span><span class="src">Sáu việc là bản mẫu theo cẩm nang, cần đối chiếu tờ BeOut gốc.</span>'+(c.st==='open'?'<div class="row act">'+HAND.map(function(x,j){return '<button class="chip" data-rh="'+i+'|'+j+'" aria-pressed="'+c.ticks[j]+'">'+esc(x)+'</button>'}).join('')+'</div><div class="row act"><button class="btn sm primary" data-rsend="'+i+'"'+(all?'':' disabled')+'>Gửi bàn giao để duyệt</button><span class="src">Người duyệt: Lê Minh Quân (mẫu, đội trưởng), khác người rời.</span></div>':'<span class="badge ok">Đã gửi, chờ người duyệt</span>')+'</div>'}
+    var chk=c.checks&&c.checks.length?'<div class="checks">'+c.checks.map(function(x){return '<span class="badge '+x[1]+'">'+(x[1]==='ok'?'✓ ':'✕ ')+esc(x[0])+'</span>'}).join('')+'</div>':'';
+    var act='';
+    if(!c.refuse&&!c.noact){var S={done:['CA đã quyết','ok'],dropped:['Đã bỏ','gray'],waiting:['Chờ Pháp chế','gray'],failed:['Máy dừng','bad']};
+      act=c.st==='open'?'<div class="row act"><button class="btn sm primary" data-rok="'+i+'">Đã đọc, dùng bản này</button><button class="btn sm danger" data-rno="'+i+'">Bỏ</button></div>':'<span><span class="badge '+S[c.st][1]+'">'+S[c.st][0]+'</span></span>';act+='<span class="src">Bản máy, CA đọc và quyết.</span>'}
+    return '<div class="rcard'+(c.refuse?' refuse':'')+(c.plain?' plain':'')+'"><b>'+esc(c.t)+'</b><div class="bd">'+esc(c.b)+'</div>'+chk+act+'</div>';
+  }
+  function renderMsgs(){
+    var r=R(state.room);
+    $('#rMsgs').innerHTML='<div class="rsys">Hôm nay</div>'+r.msgs.map(function(m,i){
+      if(m.s==='sys')return '<div class="rsys">'+esc(m.x)+'</div>';
+      var ag=m.s==='ag',nm=ag?(m.who||'VNDCARE Agent'):m.n,b='';
+      if(m.x)b+='<div class="tx">'+esc(m.x)+'</div>';
+      if(m.link)b+='<div><button class="btn sm" data-go="'+m.link[1]+'">'+esc(m.link[0])+'</button></div>';
+      if(m.card)b+=cardHtml(m.card,i);
+      return '<div class="rm"><span class="av'+(ag?' ag':'')+'">'+(ag?'VC':esc(ini(nm)))+'</span><div class="body"><span><b>'+esc(nm)+'</b> <span class="src">'+(m.t||'')+'</span></span>'+b+'</div></div>';
+    }).join('');
+    $('#rMsgs').scrollTop=1e6;
+  }
+  function fieldsOf(k){return k.f||(k.f=[{k:'Kênh khách ưa dùng',v:k.ch,e:1,w:'ca'},{k:'Nhịp hẹn',v:k.goi==='DCA'?'Mỗi 2 tuần':'Theo gói',e:1,w:'ca'},{k:'Ghi chú nội bộ',v:'',e:1,w:'ca'},{k:'Biến cố đang mở',v:k.ev,e:0,w:'ai'},{k:'Hồ sơ rủi ro',v:'Chưa đánh giá',e:0,w:'lock'},{k:'Hạn mức margin',v:'Ô chờ',e:0,w:'lock'}])}
+  function renderCanvas(){
+    var el=$('#canvas');if(!K(state.room)){el.innerHTML='';return}
+    var k=K(state.room),t=state.ctab;
+    var tabs='<div class="filters" style="margin:0">'+[['ho-so','Hồ sơ'],['la-ban','La bàn'],['hoat-dong','Hoạt động'],['thuoc','Thước']].map(function(x){return '<button class="chip" data-ct="'+x[0]+'" aria-pressed="'+(t===x[0])+'">'+x[1]+'</button>'}).join('')+'</div>';
+    var b='';
+    if(t==='ho-so'){b='<div class="panel"><div class="ph"><h3>Hồ sơ sống</h3><span class="badge ag">đồng bộ với phòng</span></div><p>Sửa tại chỗ, thay đổi hiện trong phòng.</p><div class="tw"><table><tbody>'+fieldsOf(k).map(function(f,i){var who=f.w==='ca'?'<span class="badge gray">CA nhập</span>':f.w==='ai'?'<span class="badge ag">Máy ghi</span>':'<span class="lock">Bảo vệ</span>';var val=f.e?'<input class="fin act" data-lf="'+i+'" value="'+ea(f.v)+'" placeholder="Nhập…" aria-label="'+ea(f.k)+'">':esc(f.v);return '<tr><td style="color:var(--muted)">'+f.k+'</td><td>'+val+'</td><td>'+who+'</td></tr>'}).join('')+'</tbody></table></div></div>'
+      +'<div class="panel"><h3>Ticket của khách</h3>'+(tickets.filter(function(x){return x.kid===k.id}).map(function(x){return '<div class="krow"><span class="t">'+x.id+' · '+esc(x.title)+'</span><span class="row"><span class="kim on">'+x.kim+'</span><span class="badge gray">'+x.ch+'</span><span class="badge '+(x.st==='Chờ CA'?'warn':'gray')+'">'+x.st+'</span></span></div>'}).join('')||'<span class="src">Chưa có ticket.</span>')+'</div>';}
+    else if(t==='la-ban'){var n=NE.filter(function(x){return x.k===state.ne})[0],q=k.ne[n.k];
+      b='<div class="panel"><h3>Mỗi lúc một kim sáng</h3><div class="kims">'+KIMS.map(function(x){return '<span class="kim'+(x===k.kim?' on':'')+'">'+x+'</span>'}).join('')+'</div></div><div class="rail">'+NE.map(function(x){return '<button class="ne'+(k.ne[x.k]?' done':'')+'" data-ne="'+x.k+'" aria-pressed="'+(x.k===state.ne)+'"><b>'+x.p+'</b><span>'+x.k+' · '+x.n+'</span></button>'}).join('')+'</div>'
+      +'<div class="panel"><h3>Việc chính lúc này (CTA sáng) · '+n.p+'</h3><div class="kims"><span class="kim on">'+n.kim+'</span></div><div class="quote'+(q?'':' empty')+'">'+(q?esc(q):'Khách chưa kể phần này bằng lời của mình. Mời khách kể, không điền hộ.')+'</div><div><b>Lời mời:</b> '+esc(n.cta)+'</div><span class="badge warn" style="align-self:flex-start">Giới hạn: '+n.ranh+'</span></div>'
+      +'<div class="panel"><h3>Cùng khách xem lại giao dịch</h3><div class="gate"><span class="src">Năm câu VNDGO: ô chờ nạp từ tờ gốc ClientIndicators. Bản thử chưa chép lại để không sai chữ.</span></div></div>';}
+    else if(t==='hoat-dong'){var lg=logs.filter(function(l){return l.kid===k.id});
+      b='<div class="panel"><h3>Dấu vết chăm</h3><div class="tl">'+(k.tl.length?k.tl.map(function(e){var w=e.w==='khach'?['Khách kể','ok']:e.w==='ca'?['CA ghi','']:['Máy soạn','ag'];return '<div class="e"><span class="d">'+e.t+'</span><div><span class="badge '+w[1]+'">'+w[0]+'</span> '+esc(e.x)+(e.l?' <span class="src">Chữ: '+e.l+'</span>':'')+'</div></div>'}).join(''):'<span class="src">Chưa có dấu vết.</span>')+'</div></div>'
+      +'<div class="panel"><div class="ph"><h3>Nhật ký phòng</h3><button class="btn sm" data-copyjson="1">Sao chép JSON</button></div>'+(lg.length?lg.map(function(l){return '<div class="krow"><span class="t">'+esc(l.what)+'</span><span class="src">'+l.t+' · '+esc(l.n)+' · <code>'+l.ev+'</code></span><span class="src">'+l.steps.map(function(s){return s[0]+': '+esc(s[1])}).join(' → ')+'</span></div>'}).join(''):'<span class="src">Chưa có hoạt động.</span>')+'</div>';}
+    else{b='<div class="panel"><h3>Khách này lớn lên thế nào</h3><p>So với chính khách kỳ trước. Không so với khách khác.</p>'+[['Giữ kỷ luật khi thị trường giảm',72],['Chạm đúng nhịp đã hứa',81],['Tự đọc được Dvalues',44]].map(function(m){return '<div class="metric"><div class="h"><b>'+m[0]+'</b><span class="badge gray">mẫu</span></div><div class="bar"><i style="width:'+m[1]+'%"></i></div></div>'}).join('')+'<span class="src">Số thật đọc từ bảng số chung CU_BIS khi nối hệ thống.</span></div>';}
+    el.innerHTML=tabs+b;
+  }
+
+  /* ================= Cài đặt ================= */
+  function vSet(){
+    var LC=[['Không liên lạc khách: không gửi, gọi, đặt lịch thay khách','Không có công cụ gửi trong API'],['Không chấm điểm, không xếp hạng khách; CMI ở trong nhà','Không có endpoint xếp hạng; trường CMI ẩn với khách'],['Không gợi ý mã, không dự phóng lãi, không chào bán','Kiểm đầu ra trước khi hiện cho CA'],['Chỉ đọc trường khách đã đồng ý','Cổng dữ liệu lọc theo trường đồng ý'],['Không dùng la bàn và sổ chăm để chấm doanh số CA','Schema không có trường doanh số theo CA'],['Lời khách giữ nguyên văn; số không khớp sổ thì dừng','Đối soát lệch quá 0,5% thì máy dừng; mọi bản ra là bản máy']];
+    return '<p class="lead">Chỉ quản trị đổi được. Lan can được ép ở tầng API và schema, không chỉ dặn trong prompt.</p><div class="grid g2">'
+    +'<div class="panel"><div class="ph"><span class="av ag">VC</span><h3>VNDCARE Agent · đang chạy</h3><span class="sp"></span><span class="badge ok">Chế độ bóng</span></div><p>Năm việc, năm nhịp. Người giữ agent: Head CU_VNDCARE (ô chờ tên).</p><div class="tw"><table><thead><tr><th>Việc</th><th>Nhịp</th><th>Máy không làm</th></tr></thead><tbody><tr><td>① Tóm tắt sáng (La bàn sáng)</td><td>Mỗi sáng</td><td>Xếp hạng, chấm điểm</td></tr><tr><td>② Chuẩn bị buổi đồng hành</td><td>Trước lịch hẹn</td><td>Kịch bản chào bán</td></tr><tr><td>③ Nháp kế hoạch đầu tư (Dinvest)</td><td>Khi CA gọi</td><td>Mã, dự phóng lãi; trình khách</td></tr><tr><td>④ Đọc kết quả cuối kỳ (Dvalues)</td><td>Cuối kỳ</td><td>Đưa điểm CMI cho khách</td></tr><tr><td>⑤ Sổ chăm</td><td>Sau mỗi buổi gặp</td><td>Đánh giá CA</td></tr></tbody></table></div></div>'
+    +'<div class="panel"><div class="ph"><span class="av">VG</span><h3>VNDGO Agent · khóa</h3><span class="sp"></span><span class="badge gray">Chưa mở</span></div><p>Agent cho chính khách. Chỉ mở khi VNDCARE Agent chạy song song đủ một quý. Hai agent đọc cùng bốn kim, một khách chỉ có một la bàn.</p><div class="gate"><b>Cổng mở: sau một quý chạy song song</b><div class="bar"><i style="width:12%"></i></div><span class="src">Tiến độ mẫu. Nhà cố ý đi chậm hơn xu hướng tự giải quyết của thế giới.</span></div></div>'
+    +'<div class="panel" style="grid-column:1/-1"><h3>Lan can và nơi ép</h3><div class="tw"><table><thead><tr><th>Lan can của nhà</th><th>Ép ở đâu</th></tr></thead><tbody>'+LC.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'}).join('')+'</tbody></table></div></div>'
+    +'<div class="panel"><h3>Dữ liệu agent được đọc</h3><div class="tw"><table><thead><tr><th>Luồng</th><th>Đọc</th><th>Ghi</th></tr></thead><tbody><tr><td>Hồ sơ khách (CMS) · Tài sản (AMS) · Kế hoạch (OMS) · Sản phẩm (PMS) · CA đi cùng (iMS)</td><td>●</td><td></td></tr><tr><td>Giao dịch, buổi gặp (TMS)</td><td>●</td><td>Dấu vết chăm (việc ⑤)</td></tr><tr><td>FMS</td><td colspan="2">Không đọc</td></tr></tbody></table></div><p>Không đọc kết quả soi sáng và dữ liệu hành vi khi khách chưa đồng ý riêng. Khách chỉ là mã trong KMS.</p></div>'
+    +'<div class="panel"><h3>Cách làm của trợ lý là các tờ nhà đã viết</h3><p>Đổi cách làm bằng cách sửa tờ, không viết lại code.</p><div class="checks"><span class="badge">AppCompass 2.1</span><span class="badge">BonKim</span><span class="badge">CompassSignals</span><span class="badge">ClientIndicators L1–L10</span><span class="badge gray">Agent_Card 0.1</span></div><div class="row act"><button class="btn" data-toast="Chạy thử trên 5 bộ câu trả lời mẫu: 0 hành động thật, 0 credit (mẫu).">Chạy thử trên bộ mẫu</button></div></div>'
+    +'<div class="panel" style="grid-column:1/-1"><h3>Quyết định đang mở · dữ liệu khách đi đường nào</h3><div class="grid g2"><div class="gate"><b>(a) Agent chạy trong hệ thống của nhà qua cổng API</b><span class="src">Có kiểm quyền từng lần gọi. Cần IT nối, chậm hơn khoảng một quý. Đề xuất chọn.</span></div><div class="gate"><b>(b) Xuất tệp mã hóa hằng ngày vào KMS</b><span class="src">Nhanh hơn nhưng dữ liệu khách nhiều lớp đi qua thư mục dùng chung, rủi ro lộ cao hơn hẳn.</span></div></div></div></div>';
+  }
+
+  /* ================= Lệnh, trợ lý, sự kiện ================= */
+  function prepCard(k){return {t:'Tờ đọc lại kế hoạch · '+k.id,st:'open',checks:[['Lời khách nguyên văn','ok'],['Không xếp hạng khách','ok'],['Không mã, không dự phóng lãi','ok']],b:'Đích khách tự đặt: '+(k.ne.V||'chưa có')+'\nKim đang lệch: '+k.kim+'. '+k.ev+'.\nBa câu hỏi mở: (1) Điều gì làm anh/chị lo nhất lúc này? (2) Nguyên tắc anh/chị tự đặt còn đúng không? (3) Anh/chị muốn mình ở cạnh thế nào?\nSố liệu và tiến độ: ô chờ, đọc từ CU_BIS khi nối hệ thống.'}}
+  function refuse(id,a,why,nep,inst){post(id,{s:'ag',card:{refuse:1,t:'Mình không làm việc này: '+a,b:why+'\nNếp: '+nep+'\nThay vào đó: '+inst}})}
+  function agentReply(id,txt){
+    var t=txt.toLowerCase(),k=K(id);
+    if(/xếp hạng|doanh số|chấm điểm/.test(t))refuse(id,'xếp hạng hay chấm điểm','Khách đọc so với chính họ kỳ trước. Doanh số không phải thước của nhà.','A · Nói vì bạn','đưa danh sách khách có kim sáng, chia theo người nhận, không thứ tự.');
+    else if(/chào bán|mã cổ phiếu|mua mã|khuyên mua|dự phóng/.test(t))refuse(id,'gợi ý mã, dự phóng lãi, chào bán','Kế hoạch Dinvest là nháp cho CA, khách tự đặt. Chạm ranh tư vấn đầu tư nên chờ Pháp chế.','N · Nhu cầu và nuôi dưỡng','soạn tờ đọc lại kế hoạch từ đích khách tự đặt.');
+    else if(/nhắn tin|gửi tin|gọi khách|liên lạc|đặt lịch/.test(t))refuse(id,'liên lạc khách','CA và người đồng hành là người nói chuyện với khách.','C · Đồng hành','soạn bản nháp để CA đọc, sửa và tự gửi trong Hộp chăm.');
+    else if(/điền hộ|điền giúp|đặt đích|nói thay/.test(t))refuse(id,'điền hộ hay nói thay khách','Hồ sơ năm nếp đọc bằng lời khách kể.','E · Trao quyền','đưa câu hỏi mở để mời khách tự kể.');
+    else if(!k){var open=allOpen(),need=threads.filter(function(x){return x.st==='needs'}).length;post(id,{s:'ag',x:'Hôm nay có '+need+' tin khách chưa trả lời và '+open+' bản máy chờ bạn đọc. Mình chuẩn bị, bạn nói chuyện với khách.',link:['Mở Chờ tôi đọc','cho-doc']})}
+    else if(/chuẩn bị|tờ đọc lại/.test(t))runCmd(id,'/chuanbi');
+    else if(/tóm tắt|lời khách/.test(t))runCmd(id,'/tomtat');
+    else if(/bàn giao/.test(t))runCmd(id,'/bangiao');
+    else post(id,{s:'ag',x:'Mình hiểu vài lệnh: /chuanbi, /tomtat, /ketthuc, /bangiao. Thử bảo mình xếp hạng khách để xem lan can.'});
+  }
+  function runCmd(id,cmd){
+    var k=K(id);cmd=cmd.trim().split(/\s+/)[0].toLowerCase();
+    if(cmd==='/tudien'){$('#gloss').hidden=false;return}
+    if(!k){post(id,{s:'ag',x:'Lệnh này dùng trong phòng của một khách.'});return}
+    if(cmd==='/chuanbi'){var has=R(id).msgs.some(function(m){return m.card&&/Tờ đọc lại/.test(m.card.t)&&m.card.st==='open'});if(has)post(id,{s:'ag',x:'Tờ đọc lại đang chờ bạn ở trên. Đọc rồi quyết giúp mình.'});else post(id,{s:'ag',x:'Mình đã chuẩn bị xong. Ước tính 3 credit.',card:prepCard(k)})}
+    else if(cmd==='/tomtat'){var q=NE.filter(function(x){return k.ne[x.k]}).map(function(x){return x.k+' '+k.ne[x.k]}).join('\n');post(id,{s:'ag',card:{t:'Lời khách nguyên văn · '+k.id,b:q||'Khách chưa kể phần nào bằng lời của mình. Mình không đoán.',checks:[['Giữ nguyên văn','ok']],st:'done',noact:1}})}
+    else if(cmd==='/ketthuc')post(id,{s:'ag',x:'Cảm ơn bạn. Trước khi ghi sổ, mình soi cùng bạn một lượt.',card:{kind:'letters',t:'Nhìn lại sau buổi gặp · tám chữ VNDCARE',letters:{},st:'open'}});
+    else if(cmd==='/bangiao')post(id,{s:'ag',x:'Mình mở bàn giao cho '+k.id+'. Phòng ở lại, người mới đọc lại được toàn bộ.',card:{kind:'hand',t:'Bàn giao '+k.id,ticks:HAND.map(function(){return false}),st:'open'}});
+    else if(cmd==='/thuoc'){state.ctab='thuoc';post(id,{s:'ag',x:'Mình mở tab Thước bên phải. Khách đọc so với chính họ, không so với khách khác.'})}
+    else post(id,{s:'ag',x:'Mình chưa có lệnh '+cmd+'. Có: '+Object.keys(CMDS).join(' ')+'.'});
+  }
+
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('button,[data-th]');if(!t)return;var d=t.dataset;
+    if(d.todo){state.hopSel=d.todo;go('hop-cham');return}
+    if(d.tour){state.tour=true;refresh();return}
+    if(d.go){go(d.go);return}
+    if(d.room){go('phong',d.room);return}
+    if(d.toast){toast(d.toast);return}
+    if(d.cmd){if(d.cmd.charAt(0)==='/'){if(ro()&&d.cmd!=='/tudien'){toast('Vai Kiểm toán: chỉ xem.');return}runCmd(state.room,d.cmd)}else{$('#rInp').value=d.cmd;$('#rForm').dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))}return}
+    if(d.ct){state.ctab=d.ct;renderCanvas();return}
+    if(d.ne){state.ne=d.ne;renderCanvas();return}
+    if(d.how){state.how[d.how]=!state.how[d.how];refresh();return}
+    if(d.hf){state.hopF=d.hf;refresh();return}
+    if(d.hc){state.hopCh=d.hc;refresh();return}
+    if(d.th){state.hopSel=d.th;refresh();return}
+    if(d.send){if(ro())return;var th=threads.filter(function(x){return x.id===d.send})[0],k=K(th.kid);th.st='done';th.msgs.push(['ca',$('#draft').value]);k.tl.unshift({t:'Vừa xong',w:'ca',x:'CA trả lời '+th.ch+' (bản máy, CA đã đọc và chỉnh).',l:'A · C'});pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:k.id,ev:'touch_held',what:'CA gửi trả lời '+th.ch+' cho '+k.id,src:'Bản máy do CA đọc và sửa',cost:2,st:'Đã gửi',cls:'ok',steps:[['Thao tác','CA đọc, chỉnh và bấm gửi'],['Ghi','Dấu vết chăm ở TMS']]});R(k.id).msgs.push({s:'sys',x:'Hà Trần đã trả lời khách qua '+th.ch+'.',t:'Vừa xong'});toast('CA đã gửi. Đã ghi dấu vết chăm.');refresh();return}
+    if(d.assign){if(ro())return;var t2=threads.filter(function(x){return x.id===d.assign})[0];t2.st='team';t2.own='team';toast('Đã chuyển cho đội chăm sóc số.');refresh();return}
+    if(d.kv){state.kg.sel=d.kv;state.kg.msg='';if(d.kv==='new'&&!state.kg.draft)state.kg.draft=newDraft();refresh();return}
+    if(d.kgask){var v=$('#kgAsk').value.trim();if(!v)return;kgParse(v);refresh();return}
+    if(d.kgsave){if(ro())return;var dr=state.kg.draft;dr.name=($('#kgName').value||'').trim()||'View của tôi';dr.pin=$('#kgPin').checked;var nv=JSON.parse(JSON.stringify(dr));nv.id='s'+(state.saved.length+1);state.saved.push(nv);state.kg.sel=nv.id;state.kg.draft=null;toast('Đã lưu view'+(nv.pin?' và ghim vào La bàn':'')+'.');refresh();return}
+    if(d.invite){if(ro())return;var v2=$('#inviteSel').value;if(!v2){toast('Chọn chỗ đang vướng để mời đúng người.');return}var h=HELPN[v2],r=R(state.room);if(r.members.some(function(m){return m[1]===h[0]})){toast('Người này đã ở trong phòng.');return}r.members.push(['hp',h[0],h[1]]);pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:state.room,ev:'—',what:'Mời '+h[0]+' vào phòng '+state.room,src:'Chỗ vướng: '+v2,cost:0,st:'Đã mời',cls:'ok',steps:[['Thao tác','iLink: chọn chỗ vướng, mời đúng người đỡ']]});post(state.room,{s:'sys',x:h[0]+' ('+h[1]+', mẫu) được mời vào phòng.'});return}
+    if(d.copyjson){var j=JSON.stringify(logs.filter(function(l){return l.kid===state.room}).map(function(l){return {time:l.t,actor:l.a==='agent'?'agent':'human',name:l.n,event:l.ev,action:l.what,source:l.src,credits:l.cost,status:l.st,steps:l.steps.map(function(s){return {type:s[0],detail:s[1]}})}}),null,2);try{navigator.clipboard.writeText(j).then(function(){toast('Đã sao chép nhật ký dạng JSON.')},function(){toast('Trình duyệt chặn sao chép.')})}catch(x){toast('Trình duyệt chặn sao chép.')}return}
+    if(d.rok!==undefined||d.rno!==undefined){if(ro())return;var i=+(d.rok!==undefined?d.rok:d.rno),m=R(state.room).msgs[i],ok=d.rok!==undefined;m.card.st=ok?'done':'dropped';pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:state.room,ev:'—',what:'CA '+(ok?'quyết dùng':'bỏ')+': '+m.card.t,src:'Phòng '+state.room,cost:ok?3:0,st:ok?'CA đã quyết':'Đã bỏ',cls:ok?'ok':'gray',steps:[['Thao tác','CA đọc thẻ trong phòng và '+(ok?'chọn dùng':'bỏ')]]});post(state.room,{s:'sys',x:'Hà Trần '+(ok?'đã đọc và dùng':'đã bỏ')+': '+m.card.t});return}
+    if(d.rl){if(ro())return;var p=d.rl.split('|'),c=R(state.room).msgs[+p[0]].card;c.letters[p[1]]=!c.letters[p[1]];renderMsgs();return}
+    if(d.rsave!==undefined){if(ro())return;var c2=R(state.room).msgs[+d.rsave].card,got=VND.filter(function(v){return c2.letters[v[0]]}).map(function(v){return v[0]});if(!got.length){toast('Chọn ít nhất một chữ đã chạm.');return}var kk=K(state.room);c2.st='done';kk.tl.unshift({t:'Vừa xong',w:'ca',x:'CA ghi dấu vết chăm sau buổi gặp.',l:got.join(' · ')});pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:kk.id,ev:'advice_logged',what:'Ghi dấu vết chăm '+kk.id,src:'Sau buổi gặp',cost:0,st:'Đã ghi',cls:'ok',steps:[['Chữ đã chạm',got.join(' · ')],['Thiếu',VND.filter(function(v){return !c2.letters[v[0]]}).map(function(v){return v[0]}).join(' · ')||'không']]});post(state.room,{s:'sys',x:'Đã ghi vào sổ chăm. Chữ đã chạm: '+got.join(' · ')+'.'});toast('Đã ghi vào sổ chăm.');return}
+    if(d.rh){if(ro())return;var q=d.rh.split('|'),c3=R(state.room).msgs[+q[0]].card;c3.ticks[+q[1]]=!c3.ticks[+q[1]];renderMsgs();return}
+    if(d.rsend!==undefined){if(ro())return;var c4=R(state.room).msgs[+d.rsend].card;c4.st='sent';pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:state.room,ev:'handover_started',what:'Mở bàn giao '+state.room,src:'Chờ người duyệt khác người rời',cost:0,st:'Chờ duyệt',cls:'warn',steps:[['Thao tác','Gửi bàn giao đủ sáu việc']]});post(state.room,{s:'sys',x:'Bàn giao đã gửi cho Lê Minh Quân (mẫu) duyệt. Người duyệt khác người rời.'});return}
+    if(d.srb){if(ro())return;state.selfread[d.srb]=!state.selfread[d.srb];if(Object.keys(state.selfread).every(function(x){return state.selfread[x]}))pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:'',ev:'compass_selfread',what:'Tự soi iCompass: đọc đủ bốn kim',src:'Phòng hom-nay',cost:0,st:'Đã ghi',cls:'ok',steps:[['Thao tác','Đánh dấu đủ iGo · iWork · iLink · iValues']]});refresh();return}
+    if(d.nread){if(ro())return;NOTES.filter(function(n){return n.id===d.nread})[0].read=true;refresh();return}
+    if(t.id==='glossBtn'){$('#gloss').hidden=false;return}
+    if(t.id==='menuBtn'){document.body.classList.toggle('side-open');return}
+    if(t.id==='canvasBtn'){$('#canvas').classList.toggle('show');return}
+  });
+  document.addEventListener('change',function(e){
+    var t=e.target;
+    if(t.id==='role'){state.role=t.value;document.body.classList.toggle('audit',ro());toast(ro()?'Vai Kiểm toán: chỉ xem, mọi nút ghi bị khóa.':'Vai CA.');refresh();return}
+    if(t.dataset.sr!==undefined){if(ro()){t.checked=!t.checked;return}state.selfread[t.dataset.sr]=t.checked;refresh();return}
+    if(t.dataset.lf!==undefined){var k=K(state.room),f=fieldsOf(k)[+t.dataset.lf];if(ro()){t.value=f.v;return}var old=f.v;f.v=t.value;pushLog({t:'Vừa xong',a:'human',n:'Hà Trần',kid:k.id,ev:'—',what:'Sửa «'+f.k+'» của '+k.id,src:'Hồ sơ sống',cost:0,st:'Đã lưu',cls:'ok',steps:[['Trước',old||'(trống)'],['Sau',f.v||'(trống)']]});post(k.id,{s:'sys',x:'Hà Trần sửa «'+f.k+'»: '+(old||'(trống)')+' → '+(f.v||'(trống)')});toast('Đã lưu. Phòng đã thấy thay đổi.');return}
+    var dr=state.kg.draft;
+    if(t.id==='kgObj'){dr.obj=t.value;dr.group='kim';dr.filters={};dr.cols=OBJ[dr.obj].cols.slice(0,6).map(function(c){return c[0]});refresh();return}
+    if(t.id==='kgGroup'){dr.group=t.value;refresh();return}
+    if(t.id==='kgType'){dr.type=t.value;refresh();return}
+    if(t.dataset.kf){if(t.checked)dr.filters[t.dataset.kf]=1;else delete dr.filters[t.dataset.kf];refresh();return}
+    if(t.dataset.kc){var i=dr.cols.indexOf(t.dataset.kc);if(t.checked&&i<0)dr.cols.push(t.dataset.kc);if(!t.checked&&i>=0)dr.cols.splice(i,1);refresh();return}
+    if(t.id==='kgName'){dr.name=t.value;return}
+    if(t.id==='kgPin'){dr.pin=t.checked;return}
+  });
+  document.addEventListener('submit',function(e){
+    var f=e.target;
+    if(f.id==='rForm'){e.preventDefault();var inp=$('#rInp'),v=inp.value.trim();if(!v)return;if(ro()){toast('Vai Kiểm toán: chỉ xem, không nhắn trong phòng.');return}inp.value='';
+      if(v.charAt(0)==='/'){runCmd(state.room,v);return}
+      post(state.room,{s:'p',n:'Hà Trần',x:v});
+      if(/@trợ lý|@tl\b|@agent/i.test(v))setTimeout(function(){agentReply(state.room,v)},350);
+      else if(K(state.room)){var hp=R(state.room).members.filter(function(m){return m[0]==='hp'});if(hp.length&&/\?/.test(v)){var h=hp[hp.length-1];setTimeout(function(){post(state.room,{s:'p',n:h[1],x:HELPR[h[2]]||'Mình đã xem. (phản hồi mẫu)'})},700)}}
+      return}
+    if(f.dataset.nask){e.preventDefault();var q=f.querySelector('input').value.trim();if(!q)return;NOTES.filter(function(n){return n.id===f.dataset.nask})[0].asks.push('Bạn hỏi: '+q+' (nhà sẽ trả lời tại đây)');toast('Đã gửi câu hỏi cho nhà.');refresh()}
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')$('#gloss').hidden=true});
+
+  /* Từ điển */
+  var GL=[['Nhà nghề','Chỗ CA làm nghề đồng hành. Không phải chỗ bán hàng.'],
+    ['Bốn kim với khách (Dcompass)','Dgo: mời khách nói lại đích bằng lời của họ. Dinvest: cùng khách đặt nhịp góp và kế hoạch. Dcare: đứng cạnh khách đúng lúc, nhất là khi khó. Dvalues: cùng khách đọc lại kết quả theo kỳ. Mỗi lúc chỉ một kim sáng.'],
+    ['Bốn kim tự soi (iCompass)','iGo: tôi là ai trong nghề. iWork: tôi đi đường nào, với khách nào. iLink: ai nối tôi. iValues: tôi ở đâu so với đích.'],
+    ['Năm mục của khách (VNDGO)','V Trà Việt: điều coi trọng. N La Bàn: nền và nhu cầu. D Soi Sáng: kỷ luật. G Tích Năng Lực: mục tiêu. O Sống Đầu Tư: kết quả.'],
+    ['Ba chặng đồng hành','Be-on: mới đón vào. Be-in: đang đồng hành. Be-out: rời hoặc ngủ. Thứ tự ba việc Dưỡng · Dẫn · Dụng của từng chặng: nghĩa từng chữ là ô chờ, sẽ bổ sung từ tờ gốc.'],
+    ['Ba cách đi cùng','DA: tự chủ trên nền số. DCA: có chuyên viên đồng hành. DMA: qua doanh nghiệp hoặc đối tác.'],
+    ['Tám chữ VNDCARE','V giá trị và tầm nhìn · N nhu cầu và nuôi dưỡng · D ước mơ và kỷ luật · C đồng hành · A nói vì bạn · R trách nhiệm · E trao quyền · S phụng sự. Là tám điều nhà hứa với khách.'],
+    ['Nguồn dữ liệu','CMS: hồ sơ khách. AMS: giá trị khách đang giữ. TMS: dấu vết góp, buổi gặp, dấu vết chăm. OMS: kế hoạch đang chạy. PMS: sản phẩm khách đủ điều kiện. iMS: CA đi cùng khách. CU_BIS: bảng số chung cho mọi màn.'],
+    ['Lệnh trong phòng','/chuanbi: tờ đọc lại kế hoạch. /tomtat: lời khách nguyên văn. /ketthuc: nhìn lại sau buổi gặp. /bangiao: bàn giao khách. /thuoc: tab Thước. /tudien: mở từ điển này.']];
+  $('#gloss').innerHTML='<div class="box" role="dialog" aria-label="Từ điển nhà"><div class="ph"><h2 style="margin:0;font-size:16px">Từ điển nhà</h2><span class="sp"></span><button class="btn sm" id="glossX" type="button">Đóng</button></div><p class="src" style="margin:0">Giải nghĩa ngắn các từ của nhà. Từ nào chưa rõ nghĩa được ghi là ô chờ.</p>'+GL.map(function(g){return '<div class="metric"><b>'+g[0]+'</b><span style="font-size:13px">'+g[1]+'</span></div>'}).join('')+'</div>';
+  $('#gloss').addEventListener('click',function(e){if(e.target===$('#gloss')||e.target.id==='glossX')$('#gloss').hidden=true});
+
+  if(!location.hash)location.hash='dashboard';else route();
+  route();
+})();
+</script>
+
+</body>
+</html>
